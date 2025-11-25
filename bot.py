@@ -36,66 +36,64 @@ def run_bot():
             context = browser.contexts[0]
             page = context.pages[0]
             
-            # 2. 검색 페이지 이동
-            keyword = "딸기"
-            print(f"🔍 '{keyword}' 검색 페이지로 이동합니다...")
-            page.goto(f"https://www.coupang.com/np/search?component=&q={keyword}&channel=user", timeout=60000)
-            
-            # 로딩 대기 (페이지 구조가 바뀔 때까지 충분히 기다림)
-            time.sleep(3)
-            
-            # 3. [수확] 상품 리스트 찾기 (사용자님 HTML 구조 반영)
-            print("📋 상품 리스트 요소를 찾는 중...")
-            
             product_list = []
-            
-            # [수정 포인트] 사용자님 화면에 맞는 선택자(Selector) 사용
-            # 1순위: id="product-list" (새 디자인)
-            # 2순위: id="productList" (구 디자인 - 혹시 몰라 예비용)
-            if page.locator("ul#product-list li").count() > 0:
-                items = page.locator("ul#product-list > li")
-                print("   👉 신규 디자인(product-list) 감지됨!")
-            else:
-                items = page.locator("ul#productList > li.search-product")
-                print("   👉 기존 디자인(productList) 감지됨!")
-            
-            count = items.count()
-            if count == 0:
-                print("❌ 상품을 하나도 못 찾았습니다. 로딩이 덜 됐거나 캡차(봇방지)가 떴을 수 있습니다.")
-                return
-
-            # 상위 5개만 수집 (광고 AD 제외 로직 포함)
             collected = 0
-            for i in range(count):
-                if collected >= 5: break # 5개 모으면 중단
-                
-                try:
-                    item = items.nth(i)
-                    
-                    # 링크(a태그) 찾기
-                    link_element = item.locator("a")
-                    # 링크 주소가 없으면 패스 (광고 배너 등일 수 있음)
-                    if link_element.count() == 0: continue
-                        
-                    href = link_element.get_attribute("href")
-                    if not href: continue
+            keyword = "딸기"
 
-                    full_url = "https://www.coupang.com" + href
-                    
-                    # 상품명 추출 (구조가 조금씩 달라도 텍스트가 있는 div나 img alt 등을 찾음)
-                    name = item.inner_text().split("\n")[0] # 첫 번째 줄 텍스트를 이름으로 사용
-                    
-                    product_list.append({
-                        "rank": collected + 1,
-                        "name": name,
-                        "url": full_url
-                    })
-                    collected += 1
-                    print(f"   [{collected}등] URL 확보: {name[:10]}...")
-                    
-                except Exception as e:
-                    print(f"   ⚠️ {i}번째 항목 패스: {e}")
+            # 1페이지부터 2페이지까지 반복
+            for page_num in range(1, 3):
+                print(f"\n📄 [페이지 {page_num}] 이동 중...")
+                # 페이지 번호(page) 파라미터 추가
+                page.goto(f"https://www.coupang.com/np/search?component=&q={keyword}&channel=user&page={page_num}", timeout=60000)
+                
+                # 로딩 대기
+                time.sleep(3)
+                
+                # 3. [수확] 상품 리스트 찾기
+                print("📋 상품 리스트 요소를 찾는 중...")
+                
+                if page.locator("ul#product-list li").count() > 0:
+                    items = page.locator("ul#product-list > li")
+                    print("   👉 신규 디자인(product-list) 감지됨!")
+                else:
+                    items = page.locator("ul#productList > li.search-product")
+                    print("   👉 기존 디자인(productList) 감지됨!")
+                
+                count = items.count()
+                if count == 0:
+                    print("❌ 상품을 하나도 못 찾았습니다. 로딩이 덜 됐거나 캡차(봇방지)가 떴을 수 있습니다.")
                     continue
+
+                # 전체 수집 (제한 없음)
+                for i in range(count):
+                    # if collected >= 5: break # 제한 해제
+                    
+                    try:
+                        item = items.nth(i)
+                        
+                        # 링크(a태그) 찾기
+                        link_element = item.locator("a")
+                        if link_element.count() == 0: continue
+                            
+                        href = link_element.get_attribute("href")
+                        if not href: continue
+
+                        full_url = "https://www.coupang.com" + href
+                        
+                        # 상품명 추출
+                        name = item.inner_text().split("\n")[0]
+                        
+                        product_list.append({
+                            "rank": collected + 1,
+                            "name": name,
+                            "url": full_url
+                        })
+                        collected += 1
+                        print(f"   [{collected}등] URL 확보: {name[:10]}...")
+                        
+                    except Exception as e:
+                        print(f"   ⚠️ {i}번째 항목 패스: {e}")
+                        continue
             
             print(f"\n✅ 총 {len(product_list)}개 URL 확보 완료! 상세 수집 시작...\n")
 
