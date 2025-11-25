@@ -7,24 +7,39 @@ import os
 # 결과 저장 파일명
 FILE_NAME = "sellers_result.csv"
 
-def save_to_csv(data):
-    """데이터를 엑셀(csv) 파일에 한 줄씩 저장"""
-    file_exists = os.path.isfile(FILE_NAME)
-    with open(FILE_NAME, mode='a', encoding='utf-8-sig', newline='') as f:
-        writer = csv.writer(f)
-        # 파일이 없으면 헤더(제목) 추가
-        if not file_exists:
-            writer.writerow(["순위", "상품명", "상호", "사업자번호", "연락처", "URL"])
-        
-        writer.writerow([
-            data['rank'], 
-            data['name'], 
-            data['seller'], 
-            data['biz'], 
-            data['contact'], 
-            data['url']
-        ])
-    print(f"   💾 [저장 완료] {data['name'][:15]}...")
+# 파일 쓰기 충돌 방지용 락
+file_lock = asyncio.Lock()
+
+async def save_to_csv(data):
+    """데이터를 엑셀(csv) 파일에 한 줄씩 저장 (비동기 Lock + 재시도 로직)"""
+    async with file_lock:
+        for attempt in range(5): # 최대 5번 재시도
+            try:
+                file_exists = os.path.isfile(FILE_NAME)
+                with open(FILE_NAME, mode='a', encoding='utf-8-sig', newline='') as f:
+                    writer = csv.writer(f)
+                    if not file_exists:
+                        writer.writerow(["순위", "상품명", "상호", "사업자번호", "연락처", "URL"])
+                    
+                    writer.writerow([
+                        data['rank'], 
+                        data['name'], 
+                        data['seller'], 
+                        data['biz'], 
+                        data['contact'], 
+                        data['url']
+                    ])
+                print(f"   💾 [저장 완료] {data['name'][:15]}...")
+                return # 성공 시 함수 종료
+            except PermissionError:
+                if attempt < 4:
+                    print(f"   ⚠️ 파일이 열려있어 저장 대기 중... ({attempt+1}/5)")
+                    await asyncio.sleep(1)
+                else:
+                    print(f"   ❌ [저장 실패] 엑셀 파일을 닫아주세요! ({data['name'][:10]})")
+            except Exception as e:
+                print(f"   ❌ 저장 오류: {e}")
+                return
 
 async def process_product(context, prod, semaphore):
     """개별 상품 정보를 새 탭에서 수집하는 비동기 함수"""
@@ -40,12 +55,14 @@ async def process_product(context, prod, semaphore):
 
             await page.goto(prod['url'], timeout=60000)
             
-            # 스크롤 내리기 (판매자 정보 로딩)
-            for _ in range(6):
-                await page.mouse.wheel(0, 2000)
-                await asyncio.sleep(0.2)
-            await page.keyboard.press("End")
-            await asyncio.sleep(1) # 로딩 대기
+            # [속도 튜닝 적용] 자바스크립트로 강제 스크롤
+            # ----------------------------------------------------------
+            # 기존: for문 돌면서 휠 굴리기 (약 4~5초 소요)
+            # 수정: 자바스크립트로 바닥으로 순간이동 (약 0.1초 소요)
+            await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+            
+            # 데이터 로딩을 위해 딱 1초만 대기 (충분함)
+            await asyncio.sleep(1) 
 
             # 정보 추출
             seller, biz, contact = "-", "-", "-"
@@ -60,8 +77,8 @@ async def process_product(context, prod, semaphore):
                 if await page.locator("//th[contains(., '연락처')]/following-sibling::td[1]").count() > 0:
                     contact = await page.locator("//th[contains(., '연락처')]/following-sibling::td[1]").inner_text()
             
-            # CSV 파일 저장
-            save_to_csv({
+            # CSV 파일 저장 (await 필수)
+            await save_to_csv({
                 "rank": prod['rank'],
                 "name": prod['name'],
                 "seller": seller.strip(),
