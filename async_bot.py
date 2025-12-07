@@ -101,7 +101,7 @@ async def run_bot():
     async with async_playwright() as p:
         try:
             # 1. 켜져있는 디버깅 크롬에 연결
-            browser = await p.chromium.connect_over_cdp("http://localhost:9222")
+            browser = await p.chromium.connect_over_cdp("http://localhost:9222") #chrome devtools Protocol
             context = browser.contexts[0]
             
             # 검색용 메인 페이지 (기존 탭 사용)
@@ -117,7 +117,7 @@ async def run_bot():
             # 1페이지부터 2페이지까지 반복 (URL 수집 단계)
             for page_num in range(1, 3):
                 print(f"\n📄 [페이지 {page_num}] URL 수집 중...")
-                await page.goto(f"https://www.coupang.com/np/search?component=&q={keyword}&channel=user&page={page_num}", timeout=60000)
+                await page.goto(f"https://www.coupang.com/np/search?component=&q={keyword}&channel=user&page={page_num}", timeout=10000)
                 await asyncio.sleep(2)
                 
                 if await page.locator("ul#product-list li").count() > 0:
