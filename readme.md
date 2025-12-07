@@ -12,4 +12,21 @@
 - 쿠키 , 캐시 삭제
 - 세션 초기화
 
+
+**Windows:**
+```bash
+python -m venv venv
+가상환경
+.\venv\Scripts\activate
+
+가상환경이 켜진 상태(괄호로 (venv)가 보이는 상태)에서 패키지를 설치합니다.
+Bash
+
+pip install -r requirements.txt
+
++ env  # 암호 있을시에만
++ python manage.py migrate
++ python manage.py createsuperuser
+# 서버 admin 에서 접속 가능
+
 25_11_27
