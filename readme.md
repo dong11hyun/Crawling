@@ -14,3 +14,20 @@
 
 #### 2025_12_19
 - python v1.2_safe_crawler.py
+[무신사 사이트]
+      │
+      │ (1. 수집: Python Playwright)
+      ▼
+[ 데이터 전처리 (ETL) ] ── (2. 가공: 형태소 분석, 정제)
+      │
+      │ (3. 적재: Bulk Insert)
+      ▼
+[ OpenSearch (검색 엔진) ] ◀── [ Synonym / Analysis (검색 품질 튜닝) ]
+      ▲
+      │ (4. 검색/집계 쿼리)
+      │
+[ FastAPI (백엔드 API) ] ◀── [ Redis (캐싱 - 선택사항) ]
+      ▲
+      │ (5. REST API 요청)
+      │
+[ 사용자 / 클라이언트 (Swagger UI) ]
