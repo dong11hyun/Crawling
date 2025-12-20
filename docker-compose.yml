@@ -1,0 +1,35 @@
+version: '3'
+services:
+  opensearch-node:
+    image: opensearchproject/opensearch:2.11.0
+    container_name: opensearch-node
+    environment:
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
+      - plugins.security.disabled=true  # 초보자용: 보안 로그인 끄기 (실습 편의)
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    ports:
+      - "9200:9200" # 데이터 넣고 빼는 구멍
+      - "9600:9600"
+    networks:
+      - opensearch-net
+
+  opensearch-dashboards:
+    image: opensearchproject/opensearch-dashboards:2.11.0
+    container_name: opensearch-dashboards
+    ports:
+      - "5601:5601" # 눈으로 보는 대시보드 구멍
+    environment:
+      OPENSEARCH_HOSTS: '["http://opensearch-node:9200"]'
+      DISABLE_SECURITY_DASHBOARDS_PLUGIN: "true" # 보안 끄기
+    networks:
+      - opensearch-net
+    depends_on:
+      - opensearch-node
+
+networks:
+  opensearch-net:
