@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MUSINSA SEARCH ENGINE</title>
+    <style>
+        /* 간단한 스타일링 (CSS) */
+        body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
+        .container { max-width: 800px; margin: 50px auto; padding: 20px; }
+        
+        /* 검색창 디자인 */
+        .search-box { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; }
+        h1 { margin-bottom: 20px; font-size: 24px; color: #333; }
+        input { width: 70%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; outline: none; }
+        button { padding: 12px 24px; background-color: #000; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; }
+        button:hover { background-color: #333; }
+
+        /* 결과 리스트 디자인 */
+        .results { margin-top: 20px; }
+        .card { background: white; padding: 20px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.03); transition: transform 0.2s; border: 1px solid #eee; }
+        .card:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        
+        .card-brand { font-size: 12px; color: #777; font-weight: bold; margin-bottom: 4px; }
+        .card-title { font-size: 16px; color: #000; margin: 0 0 8px 0; line-height: 1.4; }
+        .card-price { font-size: 18px; font-weight: bold; color: #000; }
+        .card-seller { font-size: 12px; color: #999; margin-top: 10px; border-top: 1px solid #f0f0f0; padding-top: 8px; }
+        
+        .loading { text-align: center; color: #666; display: none; margin-top: 20px;}
+        .error { color: red; text-align: center; margin-top: 10px; }
+        
+        a { text-decoration: none; color: inherit; display: block; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="search-box">
+        <h1>MUSINSA SEARCH ENGINE</h1>
+        <div style="display: flex; gap: 10px; justify-content: center;">
+            <input type="text" id="keyword" placeholder="상품명 또는 브랜드를 검색하세요 (예: 패딩)" onkeypress="if(event.keyCode==13) doSearch()">
+            <button onclick="doSearch()">검색</button>
+        </div>
+        <div class="loading" id="loading">검색 중입니다... 🔍</div>
+    </div>
+
+    <div class="results" id="results">
+        </div>
+</div>
+
+<script>
+    async function doSearch() {
+        const keyword = document.getElementById('keyword').value;
+        const resultDiv = document.getElementById('results');
+        const loadingDiv = document.getElementById('loading');
+
+        if (!keyword) { alert("검색어를 입력해주세요!"); return; }
+
+        // 초기화
+        resultDiv.innerHTML = "";
+        loadingDiv.style.display = "block";
+
+        try {
+            // 1. FastAPI 서버 호출 (포트 8000 확인!)
+            const response = await fetch(`http://127.0.0.1:8000/search?keyword=${keyword}`);
+            
+            if (!response.ok) throw new Error("서버 응답 오류");
+
+            const data = await response.json();
+            
+            // 2. 결과 렌더링
+            loadingDiv.style.display = "none";
+            
+            if (data.length === 0) {
+                resultDiv.innerHTML = "<div style='text-align:center; color:#888;'>검색 결과가 없습니다. 😢</div>";
+                return;
+            }
+
+            data.forEach(item => {
+                // 숫자 3자리 콤마 찍기 (예: 89900 -> 89,900)
+                const formattedPrice = item.price.toLocaleString();
+                
+                // 카드 HTML 생성
+                const html = `
+                    <a href="${item.url}" target="_blank">
+                        <div class="card">
+                            <div class="card-brand">${item.brand}</div>
+                            <h3 class="card-title">${item.title}</h3>
+                            <div class="card-price">${formattedPrice}원</div>
+                            <div class="card-seller">
+                                판매자: ${item.seller_info ? item.seller_info.company : "정보없음"}
+                            </div>
+                        </div>
+                    </a>
+                `;
+                resultDiv.innerHTML += html;
+            });
+
+        } catch (error) {
+            loadingDiv.style.display = "none";
+            resultDiv.innerHTML = `<div class="error">에러가 발생했습니다: ${error.message}<br>서버가 켜져있는지 확인해주세요!</div>`;
+        }
+    }
+</script>
+
+</body>
+</html>

@@ -2,12 +2,22 @@ from fastapi import FastAPI, Query
 from opensearchpy import OpenSearch
 from pydantic import BaseModel
 from typing import List, Optional
+# api_server.py 상단 임포트 부분에 추가
+from fastapi.middleware.cors import CORSMiddleware
 
 # 1. 앱(App) 생성: 서버의 간판을 답니다.
 app = FastAPI(
     title="Musinsa Search Engine",
     description="무신사 크롤링 데이터를 검색하는 API입니다.",
     version="1.0.0"
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # 모든 곳에서 접속 허용 (보안상 실무에선 특정 도메인만 넣지만, 지금은 *로)
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # 2. OpenSearch 연결: 창고지기 고용
