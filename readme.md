@@ -32,3 +32,48 @@
       │ (5. REST API 요청)
       │
 [ 사용자 / 클라이언트 (Swagger UI) ]
+
+#### 2026_01_10
+프로젝트 폴더 구성 변경
+```
+c:\B2_crawling\
+│
+├── 📁 archive/                         # 🗂️ [새 폴더] 과거 버전 보관소
+│   │
+│   ├── 📁 coupang/                    # 쿠팡 크롤러들
+│   │   ├── v0.9_sync_bot.py          ← 루트에서 이동
+│   │   ├── v1.0_async_bot.py         ← 루트에서 이동
+│   │   └── v1.1_async_bot.py         ← 루트에서 이동
+│   │
+│   ├── 📁 musinsa_legacy/            # 무신사 초기 버전
+│   │   ├── v2.0_musinsa.py           ← 루트에서 이동
+│   │   └── v2.0_MUSINSA_README.md    ← 루트에서 이동
+│   │
+│   └── 📁 celery_sandbox/            # Celery 분산처리 실험 (v1.2)
+│       ├── 📁 config/                ← 루트에서 이동 (폴더 통째로)
+│       ├── 📁 crawler/               ← 루트에서 이동 (폴더 통째로)
+│       ├── manage.py                 ← 루트에서 이동
+│       └── db.sqlite3                ← 루트에서 이동
+│
+├── 📁 src/                            # ⭐ [새 폴더] 현재 사용하는 메인 코드
+│   ├── crawler.py                    ← v2.1_musinsa.py 이름 바꿔서 이동
+│   ├── api_server.py                 ← 루트에서 이동
+│   └── init_opensearch.py            ← 루트에서 이동
+│
+├── 📁 frontend/                       # 🌐 [새 폴더] 웹 UI
+│   └── index.html                    ← 루트에서 이동
+│
+├── 📁 docs/                           # 📝 [새 폴더] 문서
+│   ├── PROJECT_SUMMARY.md            ← 루트에서 이동
+│   ├── (1차최종).md                  ← 루트에서 이동
+│   └── readme.md                     ← 루트에서 이동
+│
+├── 📁 data/                           # 💾 [새 폴더] 데이터 파일
+│   └── musinsa_padding_info.csv      ← 루트에서 이동
+│
+├── docker-compose.yml                 # (루트 유지)
+├── requirements.txt                   # (루트 유지)
+├── .env                              # (루트 유지)
+├── .gitignore                        # (루트 유지)
+└── 📁 venv/                          # (루트 유지 - 가상환경)
+```
