@@ -6,14 +6,49 @@
 
 ---
 
-## 📋 전체 로드맵 요약
+## 📋 상세 구현 일정표
 
-| Week | 주제 | 핵심 기술 | 산출물 |
-|------|------|----------|--------|
-| **1** | 백엔드 기본 + 심화 | PostgreSQL, SQLAlchemy, Redis | CRUD API + 캐싱 |
+| Week | Day | 날짜 | 단계 | 작업 내용 | 핵심 기술 | 산출물 | 상태 |
+|:----:|:---:|:----:|:----:|----------|----------|--------|:----:|
+| **1** | 1 | 01/13 | 백엔드 | PostgreSQL 환경 구축 | Docker, PostgreSQL 15 | `docker-compose.yml` PostgreSQL 추가, 연결 테스트 | ⬜ |
+| **1** | 2 | 01/14 | 백엔드 | SQLAlchemy 모델 정의 | SQLAlchemy 2.0, Alembic | `database/connection.py`, `database/models.py` (Product, Seller) | ⬜ |
+| **1** | 3 | 01/15 | 백엔드 | CRUD API 구현 | FastAPI, Pydantic | `database/schemas.py`, `routers/products.py` (POST/GET/PUT/DELETE) | ⬜ |
+| **1** | 4 | 01/16 | 백엔드 | 크롤러-DB 연동 | UPSERT, 트랜잭션 | `crawler.py` 수정 (PostgreSQL + OpenSearch 듀얼 저장) | ⬜ |
+| **1** | 5 | 01/17 | 캐싱 | Redis 환경 구축 | Docker, Redis 7 | `docker-compose.yml` Redis 추가, 연결 테스트 | ⬜ |
+| **1** | 6 | 01/18 | 캐싱 | 캐싱 로직 구현 | Redis, TTL | `src/cache.py`, `routers/search.py` 캐싱 적용 | ⬜ |
+| **1** | 7 | 01/19 | 캐싱 | 캐시 관리 기능 | Cache Invalidation | 캐시 무효화 API, 통계 API, 자동 무효화 | ⬜ |
+| **2** | 1 | 01/20 | 파이프라인 | Airflow 환경 구축 | Airflow 2.8, LocalExecutor | `airflow/docker-compose.yml`, 웹 UI 접속 | ⬜ |
+| **2** | 2 | 01/21 | 파이프라인 | 첫 번째 DAG 작성 | DAG, PythonOperator | `dags/musinsa_crawl_dag.py` (crawl→validate→load) | ⬜ |
+| **2** | 3 | 01/22 | 파이프라인 | Task 분리 및 모듈화 | 에러 핸들링, 로깅 | `src/tasks/` 폴더 (crawl_task, validate_task, load_task) | ⬜ |
+| **2** | 4 | 01/23 | 파이프라인 | XCom 데이터 전달 | XCom, 대용량 데이터 | Task 간 데이터 전달, 파일/S3 경로 전달 | ⬜ |
+| **2** | 5 | 01/24 | 파이프라인 | 알림 및 재시도 로직 | Slack, Retry, SLA | 실패 알림, 지수 백오프 재시도, SLA 설정 | ⬜ |
+| **3** | 1 | 01/27 | 실시간 | Kafka 환경 구축 | Kafka, Zookeeper | `docker-compose.yml` Kafka 추가, Topic 생성 | ⬜ |
+| **3** | 2 | 01/28 | 실시간 | Python 클라이언트 설정 | kafka-python | Kafka 연결 테스트, Kafka UI 확인 | ⬜ |
+| **3** | 3 | 01/29 | 실시간 | Producer 구현 | KafkaProducer | `src/kafka/producer.py`, 크롤러 Kafka 발행 연동 | ⬜ |
+| **3** | 4 | 01/30 | 실시간 | Consumer 구현 | KafkaConsumer, Consumer Group | `consumer_postgres.py`, `consumer_opensearch.py` | ⬜ |
+| **3** | 5 | 01/31 | 실시간 | 에러 처리 및 DLQ | Dead Letter Queue, Offset | DLQ 구현, Offset 관리 (at-least-once) | ⬜ |
+| **4** | 1 | 02/03 | 인프라 | Dockerfile 작성 | Docker, Playwright | `Dockerfile` (API), `Dockerfile.crawler` (크롤러) | ⬜ |
+| **4** | 2 | 02/04 | 인프라 | 이미지 빌드 및 테스트 | Docker Compose, Registry | 로컬 빌드 테스트, Docker Hub 푸시 | ⬜ |
+| **4** | 3 | 02/05 | 배포 | K8s 기본 리소스 배포 | Namespace, Deployment, Service | `k8s/namespace.yaml`, `k8s/api/` (deployment, service) | ⬜ |
+| **4** | 4 | 02/06 | 배포 | CronJob + StatefulSet | CronJob, StatefulSet | `k8s/crawler/cronjob.yaml`, PostgreSQL/OpenSearch StatefulSet | ⬜ |
+| **4** | 5 | 02/07 | 배포 | ConfigMap, Secret, Ingress | K8s 설정 관리 | 환경 설정, 비밀번호 관리, 외부 접속 설정 | ⬜ |
+| **4** | 6 | 02/08 | CI/CD | GitHub Actions 설정 | GitHub Actions | `.github/workflows/ci.yaml` (빌드→푸시→배포) | ⬜ |
+| **4** | 7 | 02/09 | CI/CD | 배포 전략 + 최종 테스트 | Rolling Update, HPA, Probe | Health Check, 오토스케일링, E2E/부하 테스트 | ⬜ |
+
+### 📊 주차별 요약
+
+| Week | 주제 | 핵심 기술 | 최종 산출물 |
+|:----:|------|----------|------------|
+| **1** | 백엔드 기본 + 심화 | PostgreSQL, SQLAlchemy, Redis | CRUD API + 캐싱 시스템 |
 | **2** | 데이터 파이프라인 | Airflow | DAG 기반 스케줄링 크롤러 |
 | **3** | 실시간 처리 | Kafka | 이벤트 드리븐 파이프라인 |
-| **4** | 인프라 & 배포 | Docker, Kubernetes, CI/CD | 프로덕션 배포 |
+| **4** | 인프라 & 배포 | Docker, Kubernetes, CI/CD | 프로덕션 배포 환경 |
+
+### 🎯 진행 상태 범례
+- ⬜ 미착수
+- 🔄 진행 중
+- ✅ 완료
+- ❌ 보류/취소
 
 ---
 
