@@ -1,0 +1,4 @@
+FROM opensearchproject/opensearch:2.11.0
+
+# Nori 한국어 분석기 플러그인 설치
+RUN ./bin/opensearch-plugin install --batch analysis-nori

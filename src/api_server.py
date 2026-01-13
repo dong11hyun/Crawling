@@ -22,7 +22,7 @@ app.add_middleware(
 
 # 2. OpenSearch 연결: 창고지기 고용
 client = OpenSearch(
-    hosts=[{'host': 'localhost', 'port': 9200}],
+    hosts=[{'host': 'localhost', 'port': 9201}],
     http_compress=True,
     use_ssl=False,
     verify_certs=False,

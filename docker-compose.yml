@@ -1,20 +1,23 @@
 version: '3'
 services:
   opensearch-node:
-    image: opensearchproject/opensearch:2.11.0
+    build:
+      context: .
+      dockerfile: Dockerfile.opensearch
+    image: opensearch-with-nori:2.11.0 # 로컬 빌드 이미지명
     container_name: opensearch-node
     environment:
       - discovery.type=single-node
       - bootstrap.memory_lock=true
       - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
-      - plugins.security.disabled=true  # 초보자용: 보안 로그인 끄기 (실습 편의)
+      - plugins.security.disabled=true # 초보자용: 보안 로그인 끄기 (실습 편의)
     ulimits:
       memlock:
         soft: -1
         hard: -1
     ports:
-      - "9200:9200" # 데이터 넣고 빼는 구멍
-      - "9600:9600"
+      - "9201:9200" # 데이터 넣고 빼는 구멍 (외부 9201 → 내부 9200)
+      - "9601:9600"
     networks:
       - opensearch-net
 

@@ -2,7 +2,7 @@ from opensearchpy import OpenSearch
 
 # 1. OpenSearch 연결 정보
 client = OpenSearch(
-    hosts=[{'host': 'localhost', 'port': 9200}],
+    hosts=[{'host': 'localhost', 'port': 9201}],  # docker-compose에서 9201:9200으로 매핑됨
     http_compress=True,
     use_ssl=False,
     verify_certs=False,
