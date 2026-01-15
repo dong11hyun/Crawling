@@ -10,7 +10,7 @@
 
 | Week | Day | 날짜 | 단계 | 작업 내용 | 핵심 기술 | 산출물 | 상태 |
 |:----:|:---:|:----:|:----:|----------|----------|--------|:----:|
-| **1** | 1 | 01/13 | 백엔드 | PostgreSQL 환경 구축 | Docker, PostgreSQL 15 | `docker-compose.yml` PostgreSQL 추가, 연결 테스트 | ⬜ |
+| **1** | 1 | 01/13 | 백엔드 | PostgreSQL 환경 구축 | Docker, PostgreSQL 15 | `docker-compose.yml` PostgreSQL 추가, 연결 테스트 | 🟩 |
 | **1** | 2 | 01/14 | 백엔드 | SQLAlchemy 모델 정의 | SQLAlchemy 2.0, Alembic | `database/connection.py`, `database/models.py` (Product, Seller) | ⬜ |
 | **1** | 3 | 01/15 | 백엔드 | CRUD API 구현 | FastAPI, Pydantic | `database/schemas.py`, `routers/products.py` (POST/GET/PUT/DELETE) | ⬜ |
 | **1** | 4 | 01/16 | 백엔드 | 크롤러-DB 연동 | UPSERT, 트랜잭션 | `crawler.py` 수정 (PostgreSQL + OpenSearch 듀얼 저장) | ⬜ |
