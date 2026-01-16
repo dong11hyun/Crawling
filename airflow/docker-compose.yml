@@ -14,6 +14,10 @@ x-airflow-common: &airflow-common
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     AIRFLOW__WEBSERVER__EXPOSE_CONFIG: 'true'
+    # 한국 시간 설정 (KST)
+    AIRFLOW__CORE__DEFAULT_TIMEZONE: Asia/Seoul
+    AIRFLOW__WEBSERVER__DEFAULT_UI_TIMEZONE: Asia/Seoul
+    TZ: Asia/Seoul
     # 우리 프로젝트 DB 연결 정보 (크롤러에서 사용)
     MUSINSA_DB_URL: postgresql://crawler:password@host.docker.internal:5434/musinsa_db
     OPENSEARCH_HOST: host.docker.internal

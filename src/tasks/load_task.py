@@ -5,7 +5,10 @@
 import os
 import logging
 from typing import List, Dict, Any
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
+
+# 한국 시간 (KST = UTC+9)
+KST = timezone(timedelta(hours=9))
 
 logger = logging.getLogger(__name__)
 
@@ -106,7 +109,7 @@ def load_to_opensearch(data: List[Dict[str, Any]], host: str = None, port: int =
                 "_index": "musinsa_products",
                 "_source": {
                     **item,
-                    "indexed_at": datetime.now().isoformat()
+                    "indexed_at": datetime.now(KST).isoformat()
                 }
             })
         

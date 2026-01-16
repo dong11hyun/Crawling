@@ -7,10 +7,13 @@ import asyncio
 import re
 import os
 import logging
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from typing import List, Dict, Any
 
 from playwright.async_api import async_playwright
+
+# 한국 시간 (KST = UTC+9)
+KST = timezone(timedelta(hours=9))
 
 # 로깅 설정
 logger = logging.getLogger(__name__)
@@ -114,7 +117,7 @@ async def _crawl_async(keyword: str, scroll_count: int, max_products: int) -> Li
                     "brand": brand or seller_info.get("brand", ""),
                     "price": price,
                     "seller_info": seller_info,
-                    "crawled_at": datetime.now().isoformat()
+                    "crawled_at": datetime.now(KST).isoformat()
                 })
                 
                 logger.info(f"      ✅ 수집 완료: {title[:30]}...")
