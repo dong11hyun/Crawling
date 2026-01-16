@@ -177,8 +177,53 @@ crawl_task → validate_task → load_task → cleanup_task
 
 ---
 
-## Day 5: 알림 및 재시도 로직
-> (예정)
+## Day 5: 알림 및 재시도 로직 (개념만, 구현 안함)
+- **뭘 하는 건가?**: 실패 시 Slack 알림, SLA 설정
+- **왜 필요한가?**: 운영 환경에서 장애 빠른 대응
+
+```
+Day 5: 알림 및 재시도 (개념 정리)
+├── [x] 재시도 전략 - DAG에 이미 구현됨 (retries: 3)
+├── [x] 지수 백오프 - retry_exponential_backoff: True
+└── [ ] Slack 알림 - (선택사항, Webhook 필요)
+```
+
+### 1. 이미 구현된 재시도 설정
+```python
+default_args = {
+    'retries': 3,                          # 최대 3번 재시도
+    'retry_delay': timedelta(minutes=5),   # 5분 간격
+    'retry_exponential_backoff': True,     # 지수 백오프
+    'max_retry_delay': timedelta(minutes=30),
+}
+```
+
+### 2. Slack 알림 (선택사항)
+```python
+# 구현하려면 필요한 것:
+# 1. Slack 워크스페이스
+# 2. Incoming Webhook URL
+# 3. on_failure_callback 설정
+
+from airflow.hooks.base import BaseHook
+import requests
+
+def slack_alert(context):
+    webhook_url = "https://hooks.slack.com/..."
+    message = f"❌ 실패: {context['task_instance'].task_id}"
+    requests.post(webhook_url, json={"text": message})
+
+default_args['on_failure_callback'] = slack_alert
+```
+
+### 3. SLA 설정 (선택사항)
+```python
+task = PythonOperator(
+    task_id='crawl_task',
+    python_callable=run_crawl,
+    sla=timedelta(hours=1),  # 1시간 내 완료 필요
+)
+```
 
 ---
 
@@ -188,3 +233,19 @@ crawl_task → validate_task → load_task → cleanup_task
 |--------|-----|------|
 | Airflow UI | http://localhost:8080 | admin / admin |
 | Airflow PostgreSQL | localhost:5432 | airflow DB (내부용) |
+| OpenSearch Dashboards | http://localhost:5601 | 검색 데이터 |
+| pgAdmin | http://localhost:5050 | PostgreSQL 관리 |
+| FastAPI Swagger | http://localhost:8000/docs | API 테스트 |
+
+---
+
+## ✅ Week 2 완료!
+
+```
+Week 2: Airflow 데이터 파이프라인
+├── [x] Day 1: Airflow 환경 구축
+├── [x] Day 2: 무신사 크롤링 DAG
+├── [x] Day 3: Task 분리 및 모듈화
+├── [x] Day 4: XCom 데이터 전달
+└── [x] Day 5: 알림 및 재시도 (개념)
+```
