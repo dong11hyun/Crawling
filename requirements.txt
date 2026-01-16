@@ -28,3 +28,5 @@ opensearch-py
 pandas
 fastapi
 uvicorn
+sqlalchemy==2.0.23
+pydantic==2.5.0
