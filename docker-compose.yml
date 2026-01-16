@@ -44,6 +44,8 @@ services:
       POSTGRES_USER: crawler
       POSTGRES_PASSWORD: password
       POSTGRES_DB: musinsa_db
+      TZ: Asia/Seoul # 한국 시간
+      PGTZ: Asia/Seoul # PostgreSQL 타임존
     ports:
       - "5434:5432" # 외부 5434 → 내부 5432 (다른 postgres와 충돌 방지)
     volumes:

@@ -21,7 +21,7 @@
 | **2** | 1 | 01/20 | 파이프라인 | Airflow 환경 구축 | Airflow 2.8, LocalExecutor | `airflow/docker-compose.yml`, 웹 UI 접속 | 🟩 |
 | **2** | 2 | 01/21 | 파이프라인 | 첫 번째 DAG 작성 | DAG, PythonOperator | `dags/musinsa_crawl_dag.py` (crawl→validate→load) | 🟩|
 | **2** | 3 | 01/22 | 파이프라인 | Task 분리 및 모듈화 | 에러 핸들링, 로깅 | `src/tasks/` 폴더 (crawl_task, validate_task, load_task) | 🟩 |
-| **2** | 4 | 01/23 | 파이프라인 | XCom 데이터 전달 | XCom, 대용량 데이터 | Task 간 데이터 전달, 파일/S3 경로 전달 | ⬜ |
+| **2** | 4 | 01/23 | 파이프라인 | XCom 데이터 전달 | XCom, 대용량 데이터 | Task 간 데이터 전달, 파일/S3 경로 전달 | 🟩 |
 | **2** | 5 | 01/24 | 파이프라인 | 알림 및 재시도 로직 | Slack, Retry, SLA | 실패 알림, 지수 백오프 재시도, SLA 설정 | ⬜ |
 | 🟩 | 🟩 | 🟩 | 🟩 | 🟩 | 🟩 | 🟩 | 🟩 |
 | **3** | 1 | 01/27 | 실시간 | Kafka 환경 구축 | Kafka, Zookeeper | `docker-compose.yml` Kafka 추가, Topic 생성 | ⬜ |
