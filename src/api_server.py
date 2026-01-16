@@ -5,12 +5,18 @@ from typing import List, Optional
 # api_server.py 상단 임포트 부분에 추가
 from fastapi.middleware.cors import CORSMiddleware
 
+# [Day 3] CRUD API 라우터 임포트
+from routers import products_router
+
 # 1. 앱(App) 생성: 서버의 간판을 답니다.
 app = FastAPI(
     title="Musinsa Search Engine",
     description="무신사 크롤링 데이터를 검색하는 API입니다.",
-    version="1.0.0"
+    version="2.0.0"  # 버전 업!
 )
+
+# [Day 3] 상품 CRUD 라우터 등록
+app.include_router(products_router)
 
 app.add_middleware(
     CORSMiddleware,
