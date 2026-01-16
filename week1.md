@@ -113,13 +113,65 @@ python api_server.py
 
 ---
 
-## Day 4: 크롤러 연동
-> (예정)
+## Day 4: 크롤러 연동 (듀얼 저장)
+- **뭘 하는 건가?**: 크롤러가 수집한 데이터를 PostgreSQL + OpenSearch 양쪽에 동시 저장
+- **왜 필요한가?**: PostgreSQL = 원본 보관(CRUD), OpenSearch = 빠른 검색 (각각 장점 활용)
+
+```
+Day 4: 크롤러 연동
+├── [x] v2.2_crawler.py - 듀얼 저장 버전 크롤러
+├── [x] save_to_postgres() - PostgreSQL UPSERT
+└── [x] save_to_opensearch() - OpenSearch Bulk Insert
+```
+
+### 1. 크롤러 실행
+```bash
+cd C:\B2_crawling\src
+python v2.2_crawler.py
+```
+```bash
+#인덱스 삭제시 재생성방법
+python init_opensearch.py
+```
+### 2. 확인
+- pgAdmin → products 테이블에 데이터 ✅
+- OpenSearch Dashboards (http://localhost:5601) → Discover ✅
 
 ---
 
 ## Day 5~7: Redis 캐싱
-> (예정)
+- **뭘 하는 건가?**: 검색 결과를 Redis에 임시 저장, 동일 검색 시 빠르게 반환
+- **왜 필요한가?**: OpenSearch 쿼리 부하 감소 + 응답 속도 10배↑ 향상
+
+```
+Day 5~7: Redis 캐싱
+├── [x] docker-compose.yml - Redis 서비스 추가
+├── [x] cache.py - 캐시 유틸리티 (get/set/delete)
+└── [x] api_server.py - 검색 API에 캐싱 적용
+```
+
+### 1. Redis 의존성 설치
+```bash
+pip install redis
+```
+
+### 2. Redis 컨테이너 실행
+```bash
+cd C:\B2_crawling
+docker-compose up -d redis
+```
+
+### 3. API 서버 재시작
+```bash
+cd C:\B2_crawling\src
+python api_server.py
+```
+
+### 4. 테스트
+1. http://localhost:8000/docs → `/search` 실행
+2. 터미널 로그 확인:
+   - 첫 번째 요청: `❌ 캐시 미스` → `💾 캐시 저장`
+   - 두 번째 요청: `🎯 캐시 히트`
 
 ---
 
@@ -132,3 +184,5 @@ python api_server.py
 | FastAPI Swagger | http://localhost:8000/docs | API 테스트 |
 | PostgreSQL | localhost:5434 | DB 직접 연결 시 |
 | OpenSearch | localhost:9201 | API 직접 호출 시 |
+| Redis | localhost:6380 | 캐시 서버 |
+
