@@ -105,7 +105,43 @@ docker-compose up -d
 ---
 
 ## Day 3: Task 분리 및 모듈화
-> (예정)
+- **뭘 하는 건가?**: DAG 안의 로직을 별도 모듈로 분리하여 재사용성 향상
+- **왜 필요한가?**: 코드 중복 방지, 테스트 용이, 유지보수 편의
+
+```
+Day 3: Task 분리 및 모듈화
+├── [x] src/tasks/__init__.py - 패키지 초기화
+├── [x] src/tasks/crawl_task.py - 크롤링 모듈 (seller_info 추출 포함!)
+├── [x] src/tasks/validate_task.py - 검증 모듈
+├── [x] src/tasks/load_task.py - 저장 모듈 (PostgreSQL + OpenSearch)
+└── [x] musinsa_crawl_dag.py 업데이트 - 모듈 호출 방식으로 변경
+```
+
+### 1. 파일 구조
+```
+src/
+└── tasks/
+    ├── __init__.py       # 패키지 초기화
+    ├── crawl_task.py     # 크롤링 (v2.2 로직 재사용)
+    ├── validate_task.py  # 데이터 검증
+    └── load_task.py      # 듀얼 저장
+```
+
+### 2. 개선된 점
+- `seller_info` 완전 수집 (Day 2 문제 해결!)
+- 로깅 추가
+- 에러 핸들링 강화
+- 함수 단위 테스트 가능
+
+### 3. DAG 재실행
+```bash
+# Airflow가 자동으로 DAG 파일 변경 감지 (1분 내)
+# 또는 수동 새로고침: http://localhost:8080 → DAGs → 새로고침
+```
+
+### 4. 확인
+- Trigger DAG 후 실행
+- OpenSearch에서 `seller_info` 필드 확인
 
 ---
 
