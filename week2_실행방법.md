@@ -51,7 +51,56 @@ docker ps
 ---
 
 ## Day 2: 무신사 크롤링 DAG 작성
-> (예정)
+- **뭘 하는 건가?**: 크롤러를 Airflow DAG로 감싸서 자동 실행 가능하게 만들기
+- **왜 필요한가?**: 매일 정해진 시간에 자동 크롤링, 실패 시 재시도
+
+```
+Day 2: 무신사 크롤링 DAG
+├── [x] musinsa_crawl_dag.py - 3단계 파이프라인
+│   ├── crawl_task - 크롤링 실행
+│   ├── validate_task - 데이터 검증
+│   └── load_task - OpenSearch 저장
+├── [x] Dockerfile - Playwright 포함 커스텀 이미지
+└── [x] docker-compose.yml 수정 - 커스텀 이미지 빌드
+```
+
+### 1. Playwright 에러 발생 시
+기본 Airflow 이미지에는 Playwright가 없어서 에러 발생:
+```
+ModuleNotFoundError: No module named 'playwright'
+```
+
+### 2. 해결: 커스텀 이미지 빌드
+```bash
+cd C:\B2_crawling\airflow
+
+# 기존 컨테이너 중지
+docker-compose down
+
+# 새 이미지 빌드 (5~10분 소요)
+docker-compose build --no-cache
+
+# 재시작
+docker-compose up -d
+```
+
+### 3. DAG 활성화 및 실행
+1. http://localhost:8080 접속
+2. `musinsa_crawl_dag` 찾기
+3. 토글 버튼으로 **Unpause** (활성화)
+4. ▶️ **Trigger DAG** 클릭
+
+### 4. 실행 확인
+- Graph 탭에서 Task 흐름 확인:
+  ```
+  crawl_task → validate_task → load_task
+  ```
+- 모든 Task가 **초록색** = 성공 ✅
+- OpenSearch Dashboards에서 데이터 확인
+
+### 5. 참고사항
+- 현재 DAG의 `seller_info`는 간소화됨 (빈 객체)
+- Day 3에서 기존 크롤러 로직을 모듈화하여 개선 예정
 
 ---
 

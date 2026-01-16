@@ -3,7 +3,10 @@
 # PostgreSQL을 메타데이터 DB로 사용
 
 x-airflow-common: &airflow-common
-  image: apache/airflow:2.8.0-python3.11
+  build:
+    context: .
+    dockerfile: Dockerfile
+  image: airflow-with-playwright:2.8.0
   environment: &airflow-common-env
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-postgres/airflow
