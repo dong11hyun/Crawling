@@ -14,9 +14,9 @@
 | **1** | 2 | 01/14 | 백엔드 | SQLAlchemy 모델 정의 | SQLAlchemy 2.0, Alembic | `database/connection.py`, `database/models.py` (Product, Seller) | 🟩 |
 | **1** | 3 | 01/15 | 백엔드 | CRUD API 구현 | FastAPI, Pydantic | `database/schemas.py`, `routers/products.py` (POST/GET/PUT/DELETE) | 🟩 |
 | **1** | 4 | 01/16 | 백엔드 | 크롤러-DB 연동 | UPSERT, 트랜잭션 | `crawler.py` 수정 (PostgreSQL + OpenSearch 듀얼 저장) | 🟩 |
-| **1** | 5 | 01/17 | 캐싱 | Redis 환경 구축 | Docker, Redis 7 | `docker-compose.yml` Redis 추가, 연결 테스트 | ⬜ |
-| **1** | 6 | 01/18 | 캐싱 | 캐싱 로직 구현 | Redis, TTL | `src/cache.py`, `routers/search.py` 캐싱 적용 | ⬜ |
-| **1** | 7 | 01/19 | 캐싱 | 캐시 관리 기능 | Cache Invalidation | 캐시 무효화 API, 통계 API, 자동 무효화 | ⬜ |
+| **1** | 5 | 01/17 | 캐싱 | Redis 환경 구축 | Docker, Redis 7 | `docker-compose.yml` Redis 추가, 연결 테스트 | 🟩 |
+| **1** | 6 | 01/18 | 캐싱 | 캐싱 로직 구현 | Redis, TTL | `src/cache.py`, `routers/search.py` 캐싱 적용 | 🟩 |
+| **1** | 7 | 01/19 | 캐싱 | 캐시 관리 기능 | Cache Invalidation | 캐시 무효화 API, 통계 API, 자동 무효화 | 🟩 |
 | **2** | 1 | 01/20 | 파이프라인 | Airflow 환경 구축 | Airflow 2.8, LocalExecutor | `airflow/docker-compose.yml`, 웹 UI 접속 | ⬜ |
 | **2** | 2 | 01/21 | 파이프라인 | 첫 번째 DAG 작성 | DAG, PythonOperator | `dags/musinsa_crawl_dag.py` (crawl→validate→load) | ⬜ |
 | **2** | 3 | 01/22 | 파이프라인 | Task 분리 및 모듈화 | 에러 핸들링, 로깅 | `src/tasks/` 폴더 (crawl_task, validate_task, load_task) | ⬜ |

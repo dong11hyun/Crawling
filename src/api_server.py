@@ -52,57 +52,61 @@ class ProductSchema(BaseModel):
 
 # 4. 검색 API 만들기 (GET /search)
 # 사용자가 /search?keyword=패딩&min_price=50000 처럼 요청하면 이 함수가 실행됩니다.
-@app.get("/search", response_model=List[ProductSchema])
+# [Day 5~7] Redis 캐싱 적용
+from cache import get_cache, set_cache, generate_cache_key
+
+@app.get("/search", response_model=List[ProductSchema], tags=["검색"])
 def search_products(
     keyword: str = Query(..., description="검색할 상품명 (예: 패딩)"),
     min_price: int = Query(None, description="최소 가격"),
     max_price: int = Query(None, description="최대 가격")
 ):
-    # --- [OpenSearch 쿼리 작성 (주문서)] ---
-    # 복잡해 보이지만 'bool' 쿼리의 기본 구조입니다.
-    # must: 반드시 포함해야 함 (검색어)
-    # filter: 점수엔 영향 없지만 걸러냄 (가격 등)
+    # --- [1. 캐시 확인] ---
+    cache_key = generate_cache_key("search", keyword=keyword, min_price=min_price, max_price=max_price)
+    cached_result = get_cache(cache_key)
+    
+    if cached_result is not None:
+        # 캐시 히트! OpenSearch 쿼리 없이 바로 반환
+        return cached_result
+    
+    # --- [2. 캐시 미스 → OpenSearch 검색] ---
     search_query = {
         "query": {
             "bool": {
                 "must": [
                     {
                         "multi_match": {
-                            "query": keyword,           # 사용자가 입력한 단어
-                            "fields": ["title^2", "brand"], # 제목(2배 중요), 브랜드에서 찾기
-                            "analyzer": "nori"          # 한국어 분석기 사용
+                            "query": keyword,
+                            "fields": ["title^2", "brand"],
+                            "analyzer": "nori"
                         }
                     }
                 ],
                 "filter": []
             }
         },
-        "size": 30 # 결과는 30개까지만
+        "size": 30
     }
 
-    # 가격 필터가 있다면 조건 추가 (Range Query)
+    # 가격 필터
     if min_price or max_price:
         price_range = {"range": {"price": {}}}
         if min_price:
-            price_range["range"]["price"]["gte"] = min_price # gte: 크거나 같다
+            price_range["range"]["price"]["gte"] = min_price
         if max_price:
-            price_range["range"]["price"]["lte"] = max_price # lte: 작거나 같다
-        
+            price_range["range"]["price"]["lte"] = max_price
         search_query["query"]["bool"]["filter"].append(price_range)
 
-    # --- [검색 실행] ---
     try:
-        response = client.search(
-            body=search_query,
-            index=INDEX_NAME
-        )
+        response = client.search(body=search_query, index=INDEX_NAME)
     except Exception as e:
         print(f"Error: {e}")
         return []
 
-    # --- [결과 정리] ---
-    # OpenSearch의 복잡한 응답에서 실제 데이터(_source)만 뽑아서 리스트로 만듦
     results = [hit["_source"] for hit in response["hits"]["hits"]]
+    
+    # --- [3. 결과 캐싱] ---
+    set_cache(cache_key, results, ttl=300)  # 5분간 캐시
     
     return results
 

@@ -72,6 +72,23 @@ services:
     depends_on:
       - postgres
 
+  # ========================================
+  # [Week 1] Redis - 캐시 서버
+  # ========================================
+  redis:
+    image: redis:7-alpine
+    container_name: musinsa-redis
+    ports:
+      - "6380:6379" # 외부 6380 → 내부 6379 (다른 redis와 충돌 방지)
+    command: redis-server --appendonly yes # 데이터 영속성
+    networks:
+      - opensearch-net
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 networks:
   opensearch-net:
 
