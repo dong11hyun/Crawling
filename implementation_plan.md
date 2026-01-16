@@ -18,7 +18,7 @@
 | **1** | 6 | 01/18 | 캐싱 | 캐싱 로직 구현 | Redis, TTL | `src/cache.py`, `routers/search.py` 캐싱 적용 | 🟩 |
 | **1** | 7 | 01/19 | 캐싱 | 캐시 관리 기능 | Cache Invalidation | 캐시 무효화 API, 통계 API, 자동 무효화 | 🟩 |
 | 🟩 | 🟩 | 🟩 | 🟩 | 🟩 | 🟩 | 🟩 | 🟩 |
-| **2** | 1 | 01/20 | 파이프라인 | Airflow 환경 구축 | Airflow 2.8, LocalExecutor | `airflow/docker-compose.yml`, 웹 UI 접속 | ⬜ |
+| **2** | 1 | 01/20 | 파이프라인 | Airflow 환경 구축 | Airflow 2.8, LocalExecutor | `airflow/docker-compose.yml`, 웹 UI 접속 | 🟩 |
 | **2** | 2 | 01/21 | 파이프라인 | 첫 번째 DAG 작성 | DAG, PythonOperator | `dags/musinsa_crawl_dag.py` (crawl→validate→load) | ⬜ |
 | **2** | 3 | 01/22 | 파이프라인 | Task 분리 및 모듈화 | 에러 핸들링, 로깅 | `src/tasks/` 폴더 (crawl_task, validate_task, load_task) | ⬜ |
 | **2** | 4 | 01/23 | 파이프라인 | XCom 데이터 전달 | XCom, 대용량 데이터 | Task 간 데이터 전달, 파일/S3 경로 전달 | ⬜ |
