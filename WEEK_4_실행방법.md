@@ -53,7 +53,39 @@ musinsa-consumer:latest  xxx    299MB
 ---
 
 ## Day 2: 이미지 빌드 및 테스트
-> (예정)
+- **뭘 하는 건가?**: 빌드된 이미지가 정상 작동하는지 확인
+- **왜 필요한가?**: K8s 배포 전 이미지 검증
+
+```
+Day 2: 이미지 빌드 및 테스트
+├── [x] 기본 확인 (Python 버전)
+├── [x] Consumer 이미지 실제 연결 테스트
+└── [x] Kafka 연결 성공 확인
+```
+
+### 1. 기본 확인
+```bash
+docker run --rm musinsa-api:latest python --version
+docker run --rm musinsa-consumer:latest python --version
+```
+
+### 2. Consumer 실제 연결 테스트
+```bash
+docker run --rm --network b2_crawling_opensearch-net ^
+  -e KAFKA_BOOTSTRAP_SERVERS=musinsa-kafka:29092 ^
+  -e CONSUMER_TYPE=postgres ^
+  -e MUSINSA_DB_URL=postgresql://crawler:password@musinsa-postgres:5432/musinsa_db ^
+  musinsa-consumer:latest
+```
+
+### 3. 예상 결과
+```
+✅ Consumer 연결 성공: musinsa-kafka:29092
+   Group ID: postgres-consumer-group
+   Topics: ['musinsa-products']
+🚀 Consumer 시작, 메시지 대기 중...
+Successfully joined group postgres-consumer-group
+```
 
 ---
 
