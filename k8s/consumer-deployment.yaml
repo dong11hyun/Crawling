@@ -1,0 +1,42 @@
+# Kafka Consumer Deployment
+# Consumer는 Service가 필요 없음 (외부에서 접근할 필요 없음)
+# 대신 Kafka로부터 메시지를 받아서 처리하는 역할
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: musinsa-consumer
+  namespace: musinsa
+  labels:
+    app: musinsa-consumer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: musinsa-consumer
+  template:
+    metadata:
+      labels:
+        app: musinsa-consumer
+    spec:
+      containers:
+      - name: consumer
+        image: musinsa-consumer:latest
+        imagePullPolicy: Never     # 로컬 이미지 사용 (Minikube 필수!)
+        env:
+        - name: CONSUMER_TYPE
+          value: "postgres"
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          value: "host.minikube.internal:9092"
+        - name: MUSINSA_DB_URL
+          value: "postgresql://crawler:password@host.minikube.internal:5434/musinsa_db"
+        - name: OPENSEARCH_HOST
+          value: "host.minikube.internal"
+        - name: OPENSEARCH_PORT
+          value: "9201"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "250m"

@@ -90,7 +90,102 @@ Successfully joined group postgres-consumer-group
 ---
 
 ## Day 3: K8s 기본 리소스 배포
-> (예정)
+- **뭘 하는 건가?**: Docker 이미지를 Kubernetes(Minikube)에 배포
+- **왜 필요한가?**: 컨테이너 오케스트레이션, 자동 복구, 확장성
+
+```
+Day 3: K8s 기본 리소스 배포
+├── [x] Minikube 시작
+├── [x] Docker 이미지 로드
+├── [x] Namespace 생성
+├── [x] API Deployment + Service 배포
+├── [x] Consumer Deployment 배포
+└── [x] 배포 확인
+```
+
+### 1. 사전 준비
+```powershell
+# Docker Compose 인프라 실행 (K8s에서 연결할 DB/Kafka)
+cd C:\Crawling
+docker-compose up -d postgres redis kafka zookeeper
+```
+
+### 2. Minikube 시작
+```powershell
+# Minikube 시작 (처음 한 번, 또는 PC 재시작 후)
+& "C:\Program Files\Kubernetes\Minikube\minikube.exe" start --driver=docker
+
+# 상태 확인
+& "C:\Program Files\Kubernetes\Minikube\minikube.exe" status
+
+# kubectl 연결 확인
+kubectl cluster-info
+```
+
+### 3. Docker 이미지 로드
+```powershell
+# Minikube에 이미지 로드 (각각 1-2분 소요)
+& "C:\Program Files\Kubernetes\Minikube\minikube.exe" image load musinsa-api:latest
+& "C:\Program Files\Kubernetes\Minikube\minikube.exe" image load musinsa-consumer:latest
+
+# 확인
+& "C:\Program Files\Kubernetes\Minikube\minikube.exe" image list | findstr musinsa
+```
+
+### 4. K8s 리소스 배포
+```powershell
+# 네임스페이스 생성
+kubectl apply -f k8s/namespace.yaml
+
+# API 배포 (잠시 대기 후)
+kubectl apply -f k8s/api-deployment.yaml
+kubectl apply -f k8s/api-service.yaml
+
+# Consumer 배포
+kubectl apply -f k8s/consumer-deployment.yaml
+```
+
+### 5. 배포 확인
+```powershell
+# Pod 상태 확인
+kubectl get pods -n musinsa
+
+# 서비스 확인
+kubectl get svc -n musinsa
+
+# 로그 확인
+kubectl logs deployment/musinsa-api -n musinsa --tail=20
+kubectl logs deployment/musinsa-consumer -n musinsa --tail=20
+```
+
+### 6. 서비스 접속 테스트
+```powershell
+# 서비스 URL 확인 (터널 생성)
+& "C:\Program Files\Kubernetes\Minikube\minikube.exe" service musinsa-api -n musinsa --url
+```
+
+### 7. 예상 결과
+```
+NAME                                READY   STATUS    
+musinsa-api-xxx                     1/1     Running   
+musinsa-consumer-xxx                1/1     Running   
+```
+
+### 8. 유용한 명령어
+```powershell
+# Pod 재시작
+kubectl rollout restart deployment/musinsa-api -n musinsa
+
+# 상세 정보 보기
+kubectl describe pod -n musinsa -l app=musinsa-api
+
+# 전체 리소스 보기
+kubectl get all -n musinsa
+
+# Minikube 중지/시작
+& "C:\Program Files\Kubernetes\Minikube\minikube.exe" stop
+& "C:\Program Files\Kubernetes\Minikube\minikube.exe" start
+```
 
 ---
 
@@ -108,4 +203,19 @@ Successfully joined group postgres-consumer-group
 
 | 서비스 | URL | 비고 |
 |--------|-----|------|
-| (K8s 배포 후 업데이트) | - | - |
+| **K8s API 서버** | `minikube service musinsa-api -n musinsa --url` | Minikube 터널 필요 |
+| PostgreSQL | localhost:5434 | Docker Compose |
+| Kafka | localhost:9092 | Docker Compose |
+| Redis | localhost:6380 | Docker Compose |
+
+---
+
+## K8s 파일 구조
+```
+k8s/
+├── namespace.yaml           # musinsa 네임스페이스
+├── api-deployment.yaml      # API 서버 Deployment
+├── api-service.yaml         # API 서비스 (NodePort)
+└── consumer-deployment.yaml # Consumer Deployment
+```
+

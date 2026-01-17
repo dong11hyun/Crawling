@@ -1,0 +1,9 @@
+# Musinsa 프로젝트 네임스페이스
+# 네임스페이스: K8s 리소스를 논리적으로 그룹핑하는 가상 구역
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: musinsa
+  labels:
+    app: musinsa
+    environment: development

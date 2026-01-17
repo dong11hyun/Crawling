@@ -1,0 +1,47 @@
+# FastAPI 서버 Deployment
+# Deployment: Pod를 몇 개 유지할지, 어떤 이미지 쓸지 관리하는 리소스
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: musinsa-api
+  namespace: musinsa
+  labels:
+    app: musinsa-api
+spec:
+  replicas: 1                      # Pod 개수 (나중에 늘릴 수 있음)
+  selector:
+    matchLabels:
+      app: musinsa-api             # 이 라벨을 가진 Pod를 관리
+  template:
+    metadata:
+      labels:
+        app: musinsa-api           # Pod에 붙일 라벨
+    spec:
+      containers:
+      - name: api
+        image: musinsa-api:latest
+        imagePullPolicy: Never     # 로컬 이미지 사용 (Minikube 필수!)
+        ports:
+        - containerPort: 8000
+        env:
+        # host.minikube.internal = 호스트(Windows) PC를 가리킴
+        # Docker Compose 서비스에 연결하기 위해 사용
+        - name: MUSINSA_DB_URL
+          value: "postgresql://crawler:password@host.minikube.internal:5434/musinsa_db"
+        - name: REDIS_HOST
+          value: "host.minikube.internal"
+        - name: REDIS_PORT
+          value: "6380"
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          value: "host.minikube.internal:9092"
+        - name: OPENSEARCH_HOST
+          value: "host.minikube.internal"
+        - name: OPENSEARCH_PORT
+          value: "9201"
+        resources:
+          requests:                # 최소 요구 리소스
+            memory: "256Mi"
+            cpu: "250m"
+          limits:                  # 최대 사용 가능 리소스
+            memory: "512Mi"
+            cpu: "500m"
