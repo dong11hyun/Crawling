@@ -237,6 +237,21 @@ docker-compose down && docker-compose up -d
 # Airflow UI에서 musinsa_kafka_dag Trigger
 ```
 
+### 3-1. Consumer 실행 (터미널 2개)
+DAG가 Kafka에 발행하면, Consumer가 데이터를 저장합니다.
+
+**터미널 1 - PostgreSQL Consumer:**
+```bash
+cd C:\B2_crawling\src
+python -m kafka_client.consumer_postgres
+```
+
+**터미널 2 - OpenSearch Consumer:**
+```bash
+cd C:\B2_crawling\src
+python -m kafka_client.consumer_opensearch
+```
+
 ### 4. 전체 흐름
 ```
 [Airflow DAG]
