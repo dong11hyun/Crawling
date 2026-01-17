@@ -1,0 +1,5 @@
+# Kafka Consumer 의존성
+kafka-python>=2.0.0
+sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.0
+opensearch-py>=2.3.0

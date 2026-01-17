@@ -1,0 +1,27 @@
+# Kafka Consumer Docker 이미지
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Python 패키지 설치
+COPY requirements-consumer.txt .
+RUN pip install --no-cache-dir -r requirements-consumer.txt
+
+# 소스 코드 복사
+COPY src/ ./src/
+
+# 환경변수 기본값
+ENV PYTHONUNBUFFERED=1
+ENV KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+ENV MUSINSA_DB_URL=postgresql://crawler:password@postgres:5432/musinsa_db
+ENV OPENSEARCH_HOST=opensearch
+ENV OPENSEARCH_PORT=9200
+
+# Consumer 타입 (postgres 또는 opensearch)
+ENV CONSUMER_TYPE=postgres
+
+# 실행 스크립트
+COPY docker/consumer-entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+CMD ["/entrypoint.sh"]
