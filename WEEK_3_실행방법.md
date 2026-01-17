@@ -141,7 +141,60 @@ src/kafka_client/
 ---
 
 ## Day 4: Consumer 구현
-> (예정)
+- **뭘 하는 건가?**: Kafka에서 데이터 받아서 PostgreSQL/OpenSearch에 저장
+- **왜 필요한가?**: 실시간 데이터 처리, 저장소 분리
+
+```
+Day 4: Consumer 구현
+├── [x] consumer.py - Consumer 기본 클래스
+├── [x] consumer_postgres.py - PostgreSQL Consumer
+├── [x] consumer_opensearch.py - OpenSearch Consumer
+└── [x] 메시지 소비 테스트
+```
+
+### 1. 파일 구조
+```
+src/kafka_client/
+├── consumer.py            # Consumer 기본 클래스
+├── consumer_postgres.py   # Kafka → PostgreSQL
+└── consumer_opensearch.py # Kafka → OpenSearch
+```
+
+### 2. Consumer 실행 (터미널 2개 필요)
+
+**터미널 1 - PostgreSQL Consumer:**
+```bash
+cd C:\B2_crawling\src
+python -m kafka_client.consumer_postgres
+```
+
+**터미널 2 - OpenSearch Consumer:**
+```bash
+cd C:\B2_crawling\src
+python -m kafka_client.consumer_opensearch
+```
+
+### 3. Producer로 메시지 발행 (새 터미널)
+```bash
+cd C:\B2_crawling\src
+python -m kafka_client.test_producer
+```
+
+### 4. 예상 로그
+```
+🐘 PostgreSQL Consumer:
+    📝 UPDATE: https://www.musinsa.com/products/12345
+    ✅ 처리 완료: partition=2, offset=1
+
+🔍 OpenSearch Consumer:
+    🔍 OpenSearch created: https://www.musinsa.com/products/12345
+    📝 오프셋 커밋: 10건 처리됨
+```
+
+### 5. 전체 흐름
+```
+Producer → Kafka → Consumer → PostgreSQL/OpenSearch
+```
 
 ---
 
