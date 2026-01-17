@@ -198,8 +198,74 @@ Producer → Kafka → Consumer → PostgreSQL/OpenSearch
 
 ---
 
-## Day 5: 에러 처리 및 DLQ
-> (예정)
+## Day 5: 크롤러 Kafka 연동 + DLQ 개념
+- **뭘 하는 건가?**: Airflow DAG에서 크롤링 → Kafka 발행 연동
+- **왜 필요한가?**: 실제 크롤링 데이터가 Kafka를 통해 저장소로 전달
+
+```
+Day 5: 크롤러 Kafka 연동 + DLQ 개념
+├── [x] airflow/Dockerfile - kafka-python 추가
+├── [x] airflow/docker-compose.yml - Kafka 네트워크 연결
+├── [x] musinsa_kafka_dag.py - Kafka 발행 DAG
+└── [x] DLQ 개념 이해
+```
+
+### 1. 네트워크 설정 (핵심!)
+Airflow와 Kafka가 다른 docker-compose에 있어서 네트워크 연결 필요:
+```yaml
+# airflow/docker-compose.yml
+networks:
+  b2_crawling_opensearch-net:
+    external: true
+```
+
+### 2. Kafka 주소 설정
+```python
+# Airflow 컨테이너 내부에서:
+bootstrap_servers='musinsa-kafka:29092'  # ✅ Docker 내부 주소
+
+# 로컬 venv에서:
+bootstrap_servers='localhost:9092'       # ✅ 호스트 주소
+```
+
+### 3. DAG 실행
+```bash
+# Airflow 재시작
+cd C:\B2_crawling\airflow
+docker-compose down && docker-compose up -d
+
+# Airflow UI에서 musinsa_kafka_dag Trigger
+```
+
+### 4. 전체 흐름
+```
+[Airflow DAG]
+     │
+crawl_task → validate_task → publish_kafka_task
+                                    │
+                              [Kafka Topic]
+                                    │
+                     ┌──────────────┴──────────────┐
+                     ▼                             ▼
+       [PostgreSQL Consumer]         [OpenSearch Consumer]
+```
+
+### 5. DLQ (Dead Letter Queue) 개념
+
+**DLQ란?** 처리 실패한 메시지를 별도 저장하는 큐
+
+```
+정상 흐름:  Producer → Topic → Consumer (성공)
+DLQ 흐름:   Producer → Topic → Consumer (실패) → DLQ Topic
+```
+
+| 항목 | 설명 |
+|------|------|
+| **목적** | 실패 메시지 보존, 나중에 재처리 |
+| **구현** | `musinsa-products-dlq` 토픽 생성 |
+| **사용 시점** | JSON 파싱 실패, DB 저장 실패 등 |
+
+> 💡 **이번에는 개념만** 학습. 실제 DLQ 구현은 선택사항
 
 ---
 

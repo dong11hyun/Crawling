@@ -28,7 +28,7 @@
 | **3** | 2 | 01/28 | 실시간 | Python 클라이언트 설정 | kafka-python | Kafka 연결 테스트, Kafka UI 확인 | 🟩 |
 | **3** | 3 | 01/29 | 실시간 | Producer 구현 | KafkaProducer | `src/kafka/producer.py`, 크롤러 Kafka 발행 연동 | 🟩 |
 | **3** | 4 | 01/30 | 실시간 | Consumer 구현 | KafkaConsumer, Consumer Group | `consumer_postgres.py`, `consumer_opensearch.py` | 🟩 |
-| **3** | 5 | 01/31 | 실시간 | 크롤러 Kafka 연동 + DLQ 개념 | Producer 연동, DLQ 이해 | Airflow DAG → Kafka 발행, DLQ 개념 정리 | ⬜ |
+| **3** | 5 | 01/31 | 실시간 | 크롤러 Kafka 연동 + DLQ 개념 | Producer 연동, DLQ 이해 | Airflow DAG → Kafka 발행, DLQ 개념 정리 | 🟩 |
 | 🟩 | 🟩 | 🟩 | 🟩 | 🟩 | 🟩 | 🟩 | 🟩 |
 | **4** | 1 | 02/03 | 인프라 | Dockerfile 작성 | Docker, Playwright | `Dockerfile` (API), `Dockerfile.crawler` (크롤러) | ⬜ |
 | **4** | 2 | 02/04 | 인프라 | 이미지 빌드 및 테스트 | Docker Compose, Registry | 로컬 빌드 테스트, Docker Hub 푸시 | ⬜ |

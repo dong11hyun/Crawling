@@ -85,6 +85,7 @@ services:
       retries: 5
     networks:
       - airflow-net
+      - b2_crawling_opensearch-net
 
   # Airflow 스케줄러 (DAG 실행)
   airflow-scheduler:
@@ -98,10 +99,14 @@ services:
       retries: 5
     networks:
       - airflow-net
+      - b2_crawling_opensearch-net
 
 networks:
   airflow-net:
     driver: bridge
+  # 루트 docker-compose의 네트워크에 연결
+  b2_crawling_opensearch-net:
+    external: true
 
 volumes:
   airflow_postgres_data:

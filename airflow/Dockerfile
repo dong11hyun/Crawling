@@ -31,7 +31,8 @@ RUN pip install --no-cache-dir \
     playwright==1.40.0 \
     opensearch-py \
     sqlalchemy \
-    psycopg2-binary
+    psycopg2-binary \
+    kafka-python
 
 # Playwright Chromium 설치
 RUN playwright install chromium
