@@ -20,8 +20,5 @@ ENV OPENSEARCH_PORT=9200
 # Consumer 타입 (postgres 또는 opensearch)
 ENV CONSUMER_TYPE=postgres
 
-# 실행 스크립트
-COPY docker/consumer-entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
-
-CMD ["/entrypoint.sh"]
+# 직접 Python 모듈 실행 (쉘 스크립트 문제 방지)
+CMD python -c "import os; exec('from src.kafka_client.consumer_postgres import run_postgres_consumer; run_postgres_consumer()' if os.environ.get('CONSUMER_TYPE') == 'postgres' else 'from src.kafka_client.consumer_opensearch import run_opensearch_consumer; run_opensearch_consumer()')"
