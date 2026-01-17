@@ -1,0 +1,8 @@
+# Kafka 모듈
+from .config import (
+    KAFKA_BOOTSTRAP_SERVERS,
+    TOPIC_PRODUCTS,
+    TOPIC_PRODUCTS_DLQ,
+    PRODUCER_CONFIG,
+    CONSUMER_CONFIG,
+)

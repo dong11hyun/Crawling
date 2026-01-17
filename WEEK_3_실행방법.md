@@ -54,12 +54,89 @@ docker exec -it musinsa-kafka kafka-topics --list \
 ---
 
 ## Day 2: Python 클라이언트 설정
-> (예정)
+- **뭘 하는 건가?**: kafka-python 설치 및 연결 테스트
+- **왜 필요한가?**: Python에서 Kafka Producer/Consumer 사용 준비
+
+```
+Day 2: Python 클라이언트 설정
+├── [x] kafka-python 설치
+├── [x] src/kafka/config.py - 공통 설정
+├── [x] src/kafka/test_connection.py - 연결 테스트
+└── [x] 메시지 발행/소비 테스트
+```
+
+### 1. kafka-python 설치
+```bash
+pip install kafka-python
+```
+
+### 2. 연결 테스트 실행
+```bash
+cd C:\B2_crawling\src\kafka
+python test_connection.py
+```
+
+### 3. 테스트 결과 (예시)
+```
+✅ Kafka 연결 성공: localhost:9092
+   클러스터 ID: 0jAB3w9ITC6BbwqvJvqGhQ
+✅ Topic 개수: 1 - musinsa-products
+✅ 메시지 발행 성공! Partition: 2, Offset: 0
+✅ 메시지 소비 성공!
+🎉 모든 테스트 통과!
+```
+
+### 4. 파일 구조
+```
+src/kafka/
+├── __init__.py        # 패키지 초기화
+├── config.py          # 공통 설정 (브로커, Topic)
+└── test_connection.py # 연결 테스트
+```
 
 ---
 
 ## Day 3: Producer 구현
-> (예정)
+- **뭘 하는 건가?**: Python에서 Kafka로 상품 데이터 발행
+- **왜 필요한가?**: 크롤러 → Kafka 연동 준비
+
+```
+Day 3: Producer 구현
+├── [x] kafka_client/producer.py - Producer 클래스
+├── [x] kafka_client/test_producer.py - 테스트 스크립트
+└── [x] Kafka UI에서 메시지 확인
+```
+
+### 1. Producer 테스트
+```bash
+cd C:\B2_crawling\src
+python -m kafka_client.test_producer
+```
+
+### 2. 예상 결과
+```
+📦 방법 1: ProductProducer 클래스
+    [1] 테스트 패딩 자켓 - 블랙 → ✅ 성공
+    [2] 테스트 맨투맨 - 그레이 → ✅ 성공
+
+📦 방법 2: publish_products() 함수
+    결과: 성공 3, 실패 0
+```
+
+### 3. Kafka UI 확인
+- http://localhost:8088 → Topics → musinsa-products → Messages
+- 6개 메시지 확인 (1개 테스트 + 5개 상품)
+- JSON 데이터에 `published_at` 필드 추가됨
+
+### 4. 파일 구조
+```
+src/kafka_client/
+├── __init__.py
+├── config.py          # 공통 설정
+├── producer.py        # Producer 클래스
+├── test_producer.py   # 테스트
+└── test_connection.py
+```
 
 ---
 
