@@ -70,7 +70,7 @@ docker run --rm musinsa-consumer:latest python --version
 ```
 
 ### 2. Consumer 실제 연결 테스트
-```bash
+```bash           네트워크 이름은 현재 b2인데, 폴더명마다 다름
 docker run --rm --network b2_crawling_opensearch-net ^
   -e KAFKA_BOOTSTRAP_SERVERS=musinsa-kafka:29092 ^
   -e CONSUMER_TYPE=postgres ^
