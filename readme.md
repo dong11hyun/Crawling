@@ -4,10 +4,85 @@
 
 ---
 
-## 📜 과거 버전 요약 (v1~v2)
+## 📜 과거 버전 히스토리
 
-Playwright 기반 브라우저 자동화로 크롤링 → OpenSearch 저장 → FastAPI 검색 API 구축.  
-Kafka, Airflow, K8s 등 인프라 학습용으로 과도하게 확장됨. 상품 10개 수집에 1분 이상 소요.
+### 🚀 초기 개발 여정 (v0.9 ~ v2.1)
+
+> **쿠팡 (v0.9~v1.1) → IP 차단 → 무신사 (v2.0~v2.1)**
+
+| 버전 | 핵심 변경 | 성과 | 문제점 |
+|------|----------|------|--------|
+| **v0.9** | 동기식 + CDP 연결 | MVP 완성 | 5건당 50초, 봇 탐지 |
+| **v1.0** | 비동기 전환 + Semaphore | **10배 속도 개선** | CSV 파일 충돌 |
+| **v1.1** | SQLite + Batch Insert | 안정성 확보 | **쿠팡 IP 차단** |
+| **v1.2** | Django + Celery + Redis | 분산 처리 검증 | 오버엔지니어링 |
+| **v2.0** | 무신사 전환 + OpenSearch | 한글 검색 지원 | 동적 클래스명 이슈 |
+| **v2.1** | FastAPI + 웹 프론트엔드 | 검색 서비스 완성 | Playwright 느림 |
+
+#### 핵심 기술적 해결
+
+| 문제 | 해결책 |
+|------|--------|
+| 봇 탐지 | Chrome CDP 연결 (사용자 브라우저에 기생) |
+| 동적 클래스명 | Meta Tag + XPath 상대 위치 활용 |
+| 파일 충돌 | CSV → SQLite → OpenSearch 진화 |
+| 비동기 I/O | `asyncio.Lock()`, `as_completed()` |
+
+#### 교훈
+
+> ✅ **속도**: 동기 → 비동기로 10배 개선  
+> ✅ **안정성**: 파일 → DB → 검색엔진으로 진화  
+> ❌ **복잡도**: Celery, Kafka 등 과도한 인프라 → v3에서 경량화
+
+---
+
+### Week 1-3: 인프라 학습 (Airflow, Kafka)
+
+### Week 1: 백엔드 + 데이터 엔지니어링 기초
+
+| 구현 내용 | 배운 점 |
+|-----------|---------|
+| SQLAlchemy ORM | SQL Injection 방지, DB 추상화 |
+| 듀얼 저장 패턴 | PostgreSQL(원본) + OpenSearch(검색) 동시 저장 |
+| Redis 캐싱 | Cache-Aside 패턴, TTL 설정 |
+| FastAPI CRUD | REST API 설계, Pydantic 검증 |
+| Docker Compose | 멀티 컨테이너 인프라 구축 |
+
+**교훈**: 듀얼 저장 시 **데이터 정합성** 관리가 어려움 → 트랜잭션 처리 또는 메시지 큐 필요
+
+---
+
+### Week 2: Airflow 워크플로우 오케스트레이션
+
+| 구현 내용 | 배운 점 |
+|-----------|---------|
+| DAG 스케줄링 | cron 표현식, `catchup=False` |
+| XCom 데이터 전달 | Task 간 통신, 48KB 크기 제한 대응 |
+| 커스텀 Docker 이미지 | Playwright 포함 Airflow 이미지 빌드 |
+| 재시도 전략 | 지수 백오프 (Exponential Backoff) |
+
+**교훈**: Airflow는 **복잡한 워크플로우**에 적합하지만, 단순 스크립트에는 **오버엔지니어링**
+
+---
+
+### Week 3: Kafka 실시간 스트리밍
+
+| 구현 내용 | 배운 점 |
+|-----------|---------|
+| Producer/Consumer | 메시지 발행/소비, acks 옵션 |
+| Consumer Group | 파티션 분배, 병렬 처리 |
+| DLQ (Dead Letter Queue) | 실패 메시지 격리 및 재처리 |
+| Docker 네트워크 | external 네트워크, 컨테이너 간 통신 |
+
+**교훈**: Kafka는 **대규모 분산 시스템**에 필수지만, 소량 데이터에는 **복잡도만 증가**
+
+---
+
+### v1~v2 최종 반성
+
+> ❌ Playwright 브라우저 자동화 → **상품 10개 수집에 1분 이상 소요**  
+> ❌ Kafka, Airflow, K8s 등 과도한 인프라 → **관리 복잡도 폭증**  
+> ✅ 학습 목표는 달성했으나, **실용성 부족**으로 v3에서 경량화 결정
 
 ---
 
