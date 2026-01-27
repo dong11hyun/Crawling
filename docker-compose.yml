@@ -1,163 +1,56 @@
 version: '3'
 services:
+  # ========================================
+  # OpenSearch - 검색 엔진
+  # ========================================
   opensearch-node:
     build:
       context: .
       dockerfile: Dockerfile.opensearch
-    image: opensearch-with-nori:2.11.0 # 로컬 빌드 이미지명
+    image: opensearch-with-nori:2.11.0
     container_name: opensearch-node
     environment:
       - discovery.type=single-node
       - bootstrap.memory_lock=true
       - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
-      - plugins.security.disabled=true # 초보자용: 보안 로그인 끄기 (실습 편의)
+      - plugins.security.disabled=true
     ulimits:
       memlock:
         soft: -1
         hard: -1
     ports:
-      - "9201:9200" # 데이터 넣고 빼는 구멍 (외부 9201 → 내부 9200)
+      - "9201:9200"
       - "9601:9600"
     networks:
-      - opensearch-net
+      - app-net
 
+  # ========================================
+  # OpenSearch Dashboards - 시각화 UI
+  # ========================================
   opensearch-dashboards:
     image: opensearchproject/opensearch-dashboards:2.11.0
     container_name: opensearch-dashboards
     ports:
-      - "5601:5601" # 눈으로 보는 대시보드 구멍
+      - "5601:5601"
     environment:
       OPENSEARCH_HOSTS: '["http://opensearch-node:9200"]'
-      DISABLE_SECURITY_DASHBOARDS_PLUGIN: "true" # 보안 끄기
+      DISABLE_SECURITY_DASHBOARDS_PLUGIN: "true"
     networks:
-      - opensearch-net
+      - app-net
     depends_on:
       - opensearch-node
 
   # ========================================
-  # [Week 1] PostgreSQL - 원본 데이터 저장소
-  # ========================================
-  postgres:
-    image: postgres:15
-    container_name: musinsa-postgres
-    environment:
-      POSTGRES_USER: crawler
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: musinsa_db
-      TZ: Asia/Seoul # 한국 시간
-      PGTZ: Asia/Seoul # PostgreSQL 타임존
-    ports:
-      - "5434:5432" # 외부 5434 → 내부 5432 (다른 postgres와 충돌 방지)
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - opensearch-net
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U crawler -d musinsa_db" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # ========================================
-  # [Week 1] pgAdmin - PostgreSQL GUI 관리도구
-  # ========================================
-  pgadmin:
-    image: dpage/pgadmin4:latest
-    container_name: musinsa-pgadmin
-    environment:
-      PGADMIN_DEFAULT_EMAIL: admin@admin.com
-      PGADMIN_DEFAULT_PASSWORD: admin
-    ports:
-      - "5050:80" # http://localhost:5050 으로 접속
-    networks:
-      - opensearch-net
-    depends_on:
-      - postgres
-
-  # ========================================
-  # [Week 1] Redis - 캐시 서버
+  # Redis - 캐시 서버
   # ========================================
   redis:
     image: redis:7-alpine
     container_name: musinsa-redis
     ports:
-      - "6380:6379" # 외부 6380 → 내부 6379 (다른 redis와 충돌 방지)
-    command: redis-server --appendonly yes # 데이터 영속성
+      - "6380:6379"
+    command: redis-server --appendonly yes
     networks:
-      - opensearch-net
-    healthcheck:
-      test: [ "CMD", "redis-cli", "ping" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # ========================================
-  # [Week 3] Zookeeper - Kafka 코디네이터
-  # ========================================
-  zookeeper:
-    image: confluentinc/cp-zookeeper:7.5.0
-    container_name: musinsa-zookeeper
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
-    ports:
-      - "2181:2181"
-    networks:
-      - opensearch-net
-    healthcheck:
-      test: [ "CMD", "nc", "-z", "localhost", "2181" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # ========================================
-  # [Week 3] Kafka - 메시지 브로커
-  # ========================================
-  kafka:
-    image: confluentinc/cp-kafka:7.5.0
-    container_name: musinsa-kafka
-    depends_on:
-      zookeeper:
-        condition: service_healthy
-    ports:
-      - "9092:9092"
-      - "29092:29092"
-    environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
-    networks:
-      - opensearch-net
-    healthcheck:
-      test: [ "CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list" ]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-
-  # ========================================
-  # [Week 3] Kafka UI - 모니터링 대시보드
-  # ========================================
-  kafka-ui:
-    image: provectuslabs/kafka-ui:latest
-    container_name: musinsa-kafka-ui
-    depends_on:
-      - kafka
-    ports:
-      - "8088:8080"
-    environment:
-      KAFKA_CLUSTERS_0_NAME: musinsa-cluster
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
-      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
-    networks:
-      - opensearch-net
+      - app-net
 
 networks:
-  opensearch-net:
-
-
-volumes:
-  postgres_data:
+  app-net:
