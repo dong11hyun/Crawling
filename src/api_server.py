@@ -76,10 +76,12 @@ from cache import get_cache, set_cache, generate_cache_key
 def search_products(
     keyword: str = Query(..., description="검색할 상품명 (예: 패딩)"),
     min_price: int = Query(None, description="최소 가격"),
-    max_price: int = Query(None, description="최대 가격")
+    max_price: int = Query(None, description="최대 가격"),
+    skip: int = Query(0, description="검색 시작 위치 (페이지네이션)")  # 추가
 ):
     # --- [1. 캐시 확인] ---
-    cache_key = generate_cache_key("search", keyword=keyword, min_price=min_price, max_price=max_price)
+    # 캐시 키에 skip 포함 (페이지별로 캐싱)
+    cache_key = generate_cache_key("search", keyword=keyword, min_price=min_price, max_price=max_price, skip=skip)
     cached_result = get_cache(cache_key)
     
     if cached_result is not None:
@@ -102,7 +104,8 @@ def search_products(
                 "filter": []
             }
         },
-        "size": 100  # 30 -> 100으로 변경 (더 많은 결과 표시)
+        "from": skip,     # 시작 위치 적용
+        "size": 20        # 무한 스크롤을 위해 한 번에 20개씩 로딩
     }
 
     # 가격 필터

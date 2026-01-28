@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MUSINSA SEARCH ENGINE (v2)</title>
+    <style>
+        /* CSS 개선: Grid Layout & Hover Effect */
+        body {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+
+        /* 넓게 쓰기 */
+
+        .search-box {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+            font-size: 24px;
+            color: #333;
+        }
+
+        input {
+            width: 50%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            outline: none;
+        }
+
+        button {
+            padding: 12px 24px;
+            background-color: #000;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background-color: #333;
+        }
+
+        /* Grid Layout: 가로 3개 배치 (반응형) */
+        .results {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
+            transition: transform 0.2s;
+            border: 1px solid #eee;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            /* 판매자 정보 팝업용 */
+            height: 500px;
+            /* 카드 높이 고정 (이미지 비율 유지 위해) */
+        }
+
+        .card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-img-wrapper {
+            width: 100%;
+            height: 350px;
+            overflow: hidden;
+            background: #eee;
+        }
+
+        .card-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s;
+        }
+
+        .card:hover .card-img {
+            transform: scale(1.05);
+        }
+
+        .card-info {
+            padding: 15px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .card-brand {
+            font-size: 12px;
+            color: #777;
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+
+        .card-title {
+            font-size: 15px;
+            color: #000;
+            margin: 0 0 8px 0;
+            line-height: 1.4;
+            word-break: keep-all;
+            height: 42px;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+
+        .card-price-area {
+            margin-top: auto;
+        }
+
+        .card-price {
+            font-size: 18px;
+            font-weight: bold;
+            color: #000;
+        }
+
+        /* 판매자 정보 (Hover 시 표시) */
+        .seller-info-popup {
+            display: none;
+            position: absolute;
+            bottom: 80px;
+            /* 카드 하단에서 위로 뜸 */
+            left: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.85);
+            /* 검은색 배경 */
+            color: white;
+            padding: 12px;
+            border-radius: 6px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+            font-size: 12px;
+            z-index: 10;
+            backdrop-filter: blur(2px);
+            line-height: 1.6;
+        }
+
+        .card:hover .seller-info-popup {
+            display: block;
+            animation: fadeIn 0.2s;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .loading {
+            text-align: center;
+            color: #666;
+            margin: 30px 0;
+            display: none;
+            width: 100%;
+            grid-column: 1 / -1;
+        }
+
+        .error {
+            color: red;
+            text-align: center;
+            margin-top: 10px;
+            grid-column: 1 / -1;
+        }
+
+        a {
+            text-decoration: none;
+            color: inherit;
+            display: block;
+            height: 100%;
+        }
+
+        .badge-sale {
+            color: #ff0000;
+            font-weight: bold;
+            margin-right: 5px;
+        }
+
+        .price-normal {
+            text-decoration: line-through;
+            color: #aaa;
+            font-size: 13px;
+            margin-left: 5px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="search-box">
+            <h1>MUSINSA SEARCH ENGINE</h1>
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <input type="text" id="keyword" placeholder="상품명 또는 브랜드를 검색하세요 (예: 패딩)"
+                    onkeypress="if(event.keyCode==13) resetSearch()">
+                <button onclick="resetSearch()">검색</button>
+            </div>
+        </div>
+
+        <div style="margin-bottom: 10px; color: #666; font-size: 14px; text-align: right;" id="count-display"></div>
+        <div class="results" id="results"></div>
+        <div class="loading" id="loading">추가 데이터를 불러오는 중... 🏃‍♂️</div>
+    </div>
+
+    <script>
+        let currentSkip = 0;
+        let currentKeyword = "";
+        let isLoading = false;
+        let isFinished = false;
+
+        // 1. 검색 초기화 (새로운 검색)
+        function resetSearch() {
+            currentKeyword = document.getElementById('keyword').value;
+            if (!currentKeyword) { alert("검색어를 입력해주세요!"); return; }
+
+            document.getElementById('results').innerHTML = "";
+            document.getElementById('count-display').innerText = "";
+            currentSkip = 0;
+            isFinished = false;
+
+            loadMore();
+        }
+
+        // 2. 데이터 로딩 (무한 스크롤용)
+        async function loadMore() {
+            if (isLoading || isFinished) return;
+
+            isLoading = true;
+            document.getElementById('loading').style.display = "block";
+
+            try {
+                // limit=20으로 고정해서 페이지네이션
+                const response = await fetch(`http://127.0.0.1:8000/search?keyword=${currentKeyword}&skip=${currentSkip}`);
+                if (!response.ok) throw new Error("서버 응답 오류");
+
+                const data = await response.json();
+
+                document.getElementById('loading').style.display = "none";
+
+                if (data.length === 0) {
+                    isFinished = true;
+                    if (currentSkip === 0) {
+                        document.getElementById('results').innerHTML = "<div style='text-align:center; color:#888; grid-column: 1/-1;'>검색 결과가 없습니다. 😢</div>";
+                    }
+                    return;
+                }
+
+                renderItems(data);
+
+                // 데이터가 20개 미만이면 더 이상 없다는 뜻
+                if (data.length < 20) {
+                    isFinished = true;
+                } else {
+                    currentSkip += 20; // 다음 페이지 준비
+                }
+
+            } catch (error) {
+                document.getElementById('loading').style.display = "none";
+                alert(`에러: ${error.message}`);
+            } finally {
+                isLoading = false;
+            }
+        }
+
+        // 3. 렌더링
+        function renderItems(data) {
+            const resultDiv = document.getElementById('results');
+
+            data.forEach(item => {
+                const formattedPrice = item.price.toLocaleString();
+                const normalPrice = item.normalPrice ? `<span class="price-normal">${item.normalPrice.toLocaleString()}원</span>` : '';
+                const saleRate = item.saleRate ? `<span class="badge-sale">${item.saleRate}%</span>` : '';
+
+                // 판매자 정보 (팝업용)
+                let sellerHtml = '';
+                if (item.seller_info) {
+                    const si = item.seller_info;
+                    sellerHtml = `
+                    <div class="seller-info-popup">
+                        <strong style="color:#ffd700;">[판매자 정보]</strong><br>
+                        🏢 ${si.company || '-'} (대표: ${si.ceo || '-'})<br>
+                        📞 ${si.contact || '-'} | 📧 ${si.email || '-'} <br>
+                        📍 ${si.address || '-'}<br>
+                        📜 ${si.license || '-'}
+                    </div>
+                `;
+                }
+
+                const html = `
+                <div class="card">
+                    <a href="${item.url}" target="_blank">
+                        <!-- 이미지 영역 -->
+                        <div class="card-img-wrapper">
+                            <img src="${item.thumbnail || 'https://image.msscdn.net/musinsaUI/homework/images/no_image.png'}" 
+                                 class="card-img" alt="${item.title}"
+                                 onerror="this.src='https://via.placeholder.com/300x350?text=No+Image'">
+                        </div>
+
+                        <!-- 텍스트 영역 -->
+                        <div class="card-info">
+                            <div>
+                                <div class="card-brand">${item.brand}</div>
+                                <h3 class="card-title">${item.title}</h3>
+                            </div>
+                            <div class="card-price-area">
+                                ${saleRate}
+                                <span class="card-price">${formattedPrice}원</span>
+                                ${normalPrice}
+                            </div>
+                        </div>
+                        ${sellerHtml}
+                    </a>
+                </div>
+            `;
+                resultDiv.insertAdjacentHTML('beforeend', html);
+            });
+        }
+
+        // 4. 무한 스크롤 감지
+        window.onscroll = function () {
+            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500) {
+                // 바닥에서 500px 남았을 때 미리 로딩
+                if (!isLoading && !isFinished && currentKeyword) {
+                    loadMore();
+                }
+            }
+        };
+    </script>
+
+</body>
+
+</html>

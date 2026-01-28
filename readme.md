@@ -151,8 +151,8 @@ python src/api_server.py
 
 ### 3. 크롤러 실행
 ```bash
-# 터미널 B: 크롤러 (1000개 수집)
-python src/v4_safe_crawler.py 패딩 1000
+# 터미널 B: 크롤러 (100개 수집)
+python src/v4_safe_crawler.py 패딩 100
 ```
 > 크롤러가 실행되는 동안 **즉시 검색**이 가능합니다!
 
