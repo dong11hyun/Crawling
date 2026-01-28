@@ -19,10 +19,10 @@ SEARCH_KEYWORD = "패딩"
 MAX_PRODUCTS = 1000
 BATCH_SIZE = 60  # API에서 한 번에 가져올 개수
 
-# 딜레이 설정 (초)
-API_DELAY = 1.0      # 목록 API
-HTML_DELAY = 2.0     # 상세 페이지
-RANDOM_RANGE = (0.5, 1.5)  # 추가 랜덤 딜레이
+# 딜레이 설정 (초) - 1.8배 증속
+API_DELAY = 0.6      # 목록 API
+HTML_DELAY = 1.2     # 상세 페이지
+RANDOM_RANGE = (0.3, 0.7)  # 추가 랜덤 딜레이
 
 # User-Agent 로테이션
 USER_AGENTS = [
@@ -36,6 +36,25 @@ USER_AGENTS = [
 PROGRESS_FILE = "data/progress.json"
 JSONL_FILE = "data/crawl_progress_{keyword}.jsonl"  # 점진적 저장용
 OUTPUT_FILE = "data/crawl_result_{keyword}_{timestamp}.json"
+
+# 전역 중지 플래그
+STOP_CRAWLER_FLAG = False
+
+def stop_crawling():
+    """크롤링 중지"""
+    global STOP_CRAWLER_FLAG
+    STOP_CRAWLER_FLAG = True
+    print("\n🛑 크롤링 중지 요청됨!")
+
+# 전역 진행 상태 (초기값)
+CRAWL_PROGRESS = {
+    "status": "idle",       # idle, running, finished, stopped
+    "keyword": "",
+    "total": 0,             # 목표 개수
+    "current": 0,           # 현재 수집 개수
+    "start_time": 0.0,      # 시작 시간 (ETA 계산용)
+}
+
 
 
 def get_headers():
@@ -203,7 +222,19 @@ def index_to_opensearch(client, data: dict, index_name: str = "musinsa_products"
 
 def run_crawler(keyword: str = SEARCH_KEYWORD, max_products: int = MAX_PRODUCTS):
     """메인 크롤러 실행"""
+    global STOP_CRAWLER_FLAG, CRAWL_PROGRESS
+    STOP_CRAWLER_FLAG = False  # 시작 시 플래그 초기화
+    
     start_time = time.time()
+    
+    # 진행 상태 초기화
+    CRAWL_PROGRESS.update({
+        "status": "running",
+        "keyword": keyword,
+        "total": max_products,
+        "current": 0,
+        "start_time": start_time
+    })
     
     print("=" * 60)
     print(f"🚀 무신사 크롤러 v4 (안전 수집) 시작")
@@ -239,6 +270,11 @@ def run_crawler(keyword: str = SEARCH_KEYWORD, max_products: int = MAX_PRODUCTS)
     page = 1
     
     while len(all_products) < max_products:
+        if STOP_CRAWLER_FLAG:
+            print("   🛑 [1단계] 사용자 중단 요청으로 종료")
+            CRAWL_PROGRESS["status"] = "stopped"
+            break
+
         products = get_product_list(keyword, page, BATCH_SIZE, session)
         
         if not products:
@@ -275,6 +311,11 @@ def run_crawler(keyword: str = SEARCH_KEYWORD, max_products: int = MAX_PRODUCTS)
     total = len(all_products)
     
     for idx, product in enumerate(all_products):
+        if STOP_CRAWLER_FLAG:
+            print(f"   🛑 [2단계] 사용자 중단 요청으로 종료 ({idx}개 수집됨)")
+            CRAWL_PROGRESS["status"] = "stopped"
+            break
+
         goods_no = product.get("goodsNo")
         goods_name = product.get("goodsName", "")[:30]
         
@@ -301,6 +342,9 @@ def run_crawler(keyword: str = SEARCH_KEYWORD, max_products: int = MAX_PRODUCTS)
         # ✅ 즉시 JSONL에 저장 (점진적 저장)
         append_to_jsonl(jsonl_path, result)
         results.append(result)
+        
+        # 실시간 진행률 업데이트
+        CRAWL_PROGRESS["current"] = len(results)
         
         # ✅ OpenSearch 실시간 적재
         if os_client:
@@ -338,6 +382,11 @@ def run_crawler(keyword: str = SEARCH_KEYWORD, max_products: int = MAX_PRODUCTS)
     print(f"   저장 위치: {output_path}")
     print("=" * 60)
     
+    # 완료 상태 업데이트
+    if not STOP_CRAWLER_FLAG:
+        CRAWL_PROGRESS["status"] = "finished"
+        CRAWL_PROGRESS["current"] = len(results)
+
     return results
 
 

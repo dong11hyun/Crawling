@@ -11,6 +11,9 @@ from pydantic import BaseModel
 from typing import List, Optional
 # api_server.py 상단 임포트 부분에 추가
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi import BackgroundTasks
+from v4_safe_crawler import run_crawler, stop_crawling, CRAWL_PROGRESS
+
 
 # [Day 3] CRUD API 라우터 임포트 (v4에서는 미사용으로 주석 처리)
 # from routers import products_router
@@ -136,6 +139,39 @@ def search_products(
     set_cache(cache_key, result_data, ttl=300)  # 5분간 캐시
     
     return result_data
+
+# 5. 크롤링 트리거 API (POST /crawl)
+class CrawlRequest(BaseModel):
+    keyword: str
+    max_products: int = 100
+
+@app.post("/crawl", tags=["크롤링"])
+def trigger_crawl(request: CrawlRequest, background_tasks: BackgroundTasks):
+    """
+    백그라운드에서 크롤러를 실행합니다.
+    """
+    # 백그라운드 작업 등록
+    background_tasks.add_task(run_crawler, keyword=request.keyword, max_products=request.max_products)
+    
+    return {
+        "message": f"크롤링 작업이 시작되었습니다. (검색어: {request.keyword}, 목표: {request.max_products}개)",
+        "status": "processing"
+    }
+
+@app.post("/stop-crawl", tags=["크롤링"])
+def request_stop_crawling():
+    """
+    실행 중인 크롤링 작업을 즉시 중단합니다.
+    """
+    stop_crawling()
+    return {"message": "크롤링 중지 요청을 보냈습니다.", "status": "stopped"}
+
+@app.get("/crawl-status", tags=["크롤링"])
+def get_crawl_status():
+    """
+    현재 크롤링 진행 상황을 반환합니다.
+    """
+    return CRAWL_PROGRESS
 
 # 터미널에서 'python api_server.py'로 실행할 때를 위한 코드
 if __name__ == "__main__":
