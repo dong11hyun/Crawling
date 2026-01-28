@@ -12,6 +12,7 @@ import json
 import random
 import os
 from datetime import datetime
+from opensearchpy import OpenSearch  # OpenSearch 클라이언트 추가
 
 # ================= 설정 =================
 SEARCH_KEYWORD = "패딩"
@@ -33,6 +34,7 @@ USER_AGENTS = [
 
 # 파일 경로
 PROGRESS_FILE = "data/progress.json"
+JSONL_FILE = "data/crawl_progress_{keyword}.jsonl"  # 점진적 저장용
 OUTPUT_FILE = "data/crawl_result_{keyword}_{timestamp}.json"
 
 
@@ -66,6 +68,24 @@ def save_progress(collected_ids: set):
     os.makedirs('data', exist_ok=True)
     with open(PROGRESS_FILE, 'w') as f:
         json.dump({'collected_ids': list(collected_ids)}, f)
+
+
+def append_to_jsonl(filepath: str, data: dict):
+    """JSONL 파일에 한 줄씩 추가 (점진적 저장)"""
+    os.makedirs('data', exist_ok=True)
+    with open(filepath, 'a', encoding='utf-8') as f:
+        f.write(json.dumps(data, ensure_ascii=False) + '\n')
+
+
+def load_jsonl(filepath: str) -> list:
+    """JSONL 파일에서 기존 데이터 로드"""
+    results = []
+    if os.path.exists(filepath):
+        with open(filepath, 'r', encoding='utf-8') as f:
+            for line in f:
+                if line.strip():
+                    results.append(json.loads(line))
+    return results
 
 
 def get_product_list(keyword: str, page: int, size: int = 60, session=None) -> list:
@@ -145,6 +165,42 @@ def get_seller_info(goods_no: int, session=None) -> dict:
     return {}
 
 
+    return {}
+
+
+def get_opensearch_client():
+    """OpenSearch 클라이언트 생성"""
+    return OpenSearch(
+        hosts=[{'host': 'localhost', 'port': 9201}],  # Docker 매핑 포트 확인
+        http_auth=None,
+        use_ssl=False,
+        verify_certs=False,
+        timeout=30
+    )
+
+
+def index_to_opensearch(client, data: dict, index_name: str = "musinsa_products"):
+    """OpenSearch에 데이터 실시간 적재"""
+    try:
+        # ID를 지정하여 중복 방지 (Upsert 효과)
+        doc_id = str(data['goodsNo'])
+        
+        # _index, _source 구조 제거하고 순수 데이터만 적재 (OpenSearchpy가 알아서 처리)
+        # 단, 날짜 필드는 ISO 형식으로 맞추는게 좋음
+        if 'crawled_at' not in data:
+            data['crawled_at'] = datetime.now().isoformat()
+
+        client.index(
+            index=index_name,
+            body=data,
+            id=doc_id,
+            refresh=True # 즉시 검색 가능하게 함 (부하가 조금 있지만 실시간성 위해)
+        )
+        # print(f"      🚀 OpenSearch 적재 완료: {doc_id}")
+    except Exception as e:
+        print(f"      ❌ OpenSearch 적재 실패: {e}")
+
+
 def run_crawler(keyword: str = SEARCH_KEYWORD, max_products: int = MAX_PRODUCTS):
     """메인 크롤러 실행"""
     start_time = time.time()
@@ -157,6 +213,19 @@ def run_crawler(keyword: str = SEARCH_KEYWORD, max_products: int = MAX_PRODUCTS)
     
     # 세션 생성 (쿠키 유지)
     session = requests.Session()
+    
+    # OpenSearch 클라이언트 생성
+    try:
+        os_client = get_opensearch_client()
+        # 연결 테스트
+        if os_client.ping():
+            print("   ✅ OpenSearch 연결 성공")
+        else:
+            print("   ⚠️ OpenSearch 연결 실패 (Docker 확인 필요)")
+            os_client = None
+    except Exception as e:
+        print(f"   ⚠️ OpenSearch 초기화 에러: {e}")
+        os_client = None
     
     # 이전 진행 상태 로드
     collected_ids = load_progress()
@@ -193,8 +262,16 @@ def run_crawler(keyword: str = SEARCH_KEYWORD, max_products: int = MAX_PRODUCTS)
     
     # 2단계: 판매자 정보 수집
     print(f"\n📦 [2단계] 판매자 정보 수집 중...")
+    print(f"   💾 점진적 저장 활성화 (JSONL)")
     
-    results = []
+    # JSONL 파일 경로
+    jsonl_path = JSONL_FILE.format(keyword=keyword)
+    
+    # 기존 JSONL 데이터 로드 (재개 시)
+    results = load_jsonl(jsonl_path)
+    if results:
+        print(f"   📂 기존 데이터 복원: {len(results)}개")
+    
     total = len(all_products)
     
     for idx, product in enumerate(all_products):
@@ -220,18 +297,26 @@ def run_crawler(keyword: str = SEARCH_KEYWORD, max_products: int = MAX_PRODUCTS)
             "thumbnail": product.get("thumbnail"),
             "seller_info": seller_info
         }
+        
+        # ✅ 즉시 JSONL에 저장 (점진적 저장)
+        append_to_jsonl(jsonl_path, result)
         results.append(result)
+        
+        # ✅ OpenSearch 실시간 적재
+        if os_client:
+            index_to_opensearch(os_client, result)
         
         # 진행 상태 저장 (100개마다)
         collected_ids.add(goods_no)
         if (idx + 1) % 100 == 0:
             save_progress(collected_ids)
             print(f"   💾 진행 상태 저장 완료 ({idx+1}개)")
+            print(f"   📄 JSONL 파일: {jsonl_path}")
         
         # 딜레이
         safe_delay(HTML_DELAY)
     
-    # 최종 저장
+    # 최종 저장 (JSONL → JSON 변환)
     elapsed = time.time() - start_time
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     output_path = OUTPUT_FILE.format(keyword=keyword, timestamp=timestamp)
@@ -240,9 +325,11 @@ def run_crawler(keyword: str = SEARCH_KEYWORD, max_products: int = MAX_PRODUCTS)
     with open(output_path, 'w', encoding='utf-8') as f:
         json.dump(results, f, ensure_ascii=False, indent=2)
     
-    # 진행 상태 초기화
+    # 진행 상태 및 JSONL 정리
     if os.path.exists(PROGRESS_FILE):
         os.remove(PROGRESS_FILE)
+    if os.path.exists(jsonl_path):
+        os.remove(jsonl_path)  # JSONL은 JSON으로 변환 완료 후 삭제
     
     print("\n" + "=" * 60)
     print(f"🎉 수집 완료!")

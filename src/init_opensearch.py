@@ -1,9 +1,14 @@
 from opensearchpy import OpenSearch
 
-# 1. OpenSearch 연결 정보
+# 1. OpenSearch 접속 정보
+HOST = 'localhost'
+PORT = 9201  # Docker 매핑 포트
+AUTH = ('admin', 'admin')  # 보안 모드일 경우 필요
+
 client = OpenSearch(
-    hosts=[{'host': 'localhost', 'port': 9201}],  # docker-compose에서 9201:9200으로 매핑됨
+    hosts=[{'host': HOST, 'port': PORT}],
     http_compress=True,
+    http_auth=AUTH, # 보안 모드일 경우 필요
     use_ssl=False,
     verify_certs=False,
 )

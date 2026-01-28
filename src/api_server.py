@@ -1,3 +1,10 @@
+import sys
+import os
+
+# 현재 파일의 부모 디렉토리(src)를 넘어, 프로젝트 루트(B2_crawling)를 경로에 추가
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from fastapi import FastAPI, Query
 from opensearchpy import OpenSearch
 from pydantic import BaseModel
@@ -5,8 +12,8 @@ from typing import List, Optional
 # api_server.py 상단 임포트 부분에 추가
 from fastapi.middleware.cors import CORSMiddleware
 
-# [Day 3] CRUD API 라우터 임포트
-from routers import products_router
+# [Day 3] CRUD API 라우터 임포트 (v4에서는 미사용으로 주석 처리)
+# from routers import products_router
 
 # 1. 앱(App) 생성: 서버의 간판을 답니다.
 app = FastAPI(
@@ -15,8 +22,8 @@ app = FastAPI(
     version="2.0.0"  # 버전 업!
 )
 
-# [Day 3] 상품 CRUD 라우터 등록
-app.include_router(products_router)
+# [Day 3] 상품 CRUD 라우터 등록 (v4에서는 미사용으로 주석 처리)
+# app.include_router(products_router)
 
 app.add_middleware(
     CORSMiddleware,
@@ -39,16 +46,26 @@ INDEX_NAME = "musinsa_products"
 # 3. 응답 모델 정의 (Pydantic): 손님에게 보여줄 메뉴판 양식
 # 데이터가 어떻게 생겼는지 정의해두면, FastAPI가 알아서 검사하고 문서를 만들어줍니다.
 class SellerInfo(BaseModel):
-    company: str
-    brand: str
-    contact: Optional[str] = None # 없을 수도 있으니 Optional
+    company: Optional[str] = None
+    brand: Optional[str] = None
+    contact: Optional[str] = None
+    email: Optional[str] = None
+    biz_num: Optional[str] = None
+    address: Optional[str] = None
+    ceo: Optional[str] = None       # 추가
+    license: Optional[str] = None   # 추가
+
 
 class ProductSchema(BaseModel):
-    title: str
-    brand: str
-    price: int
-    url: str
-    seller_info: Optional[SellerInfo] = None # 중첩된 구조 처리
+    goodsNo: Optional[int] = None   # 추가
+    title: Optional[str] = None
+    brand: Optional[str] = None
+    price: Optional[int] = 0
+    normalPrice: Optional[int] = 0  # 추가
+    saleRate: Optional[int] = 0     # 추가
+    url: Optional[str] = None
+    thumbnail: Optional[str] = None # 추가
+    seller_info: Optional[SellerInfo] = None
 
 # 4. 검색 API 만들기 (GET /search)
 # 사용자가 /search?keyword=패딩&min_price=50000 처럼 요청하면 이 함수가 실행됩니다.
@@ -85,7 +102,7 @@ def search_products(
                 "filter": []
             }
         },
-        "size": 30
+        "size": 100  # 30 -> 100으로 변경 (더 많은 결과 표시)
     }
 
     # 가격 필터
