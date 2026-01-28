@@ -67,12 +67,16 @@ class ProductSchema(BaseModel):
     thumbnail: Optional[str] = None # 추가
     seller_info: Optional[SellerInfo] = None
 
+class SearchResponse(BaseModel):
+    total: int
+    items: List[ProductSchema]
+
 # 4. 검색 API 만들기 (GET /search)
 # 사용자가 /search?keyword=패딩&min_price=50000 처럼 요청하면 이 함수가 실행됩니다.
 # [Day 5~7] Redis 캐싱 적용
 from cache import get_cache, set_cache, generate_cache_key
 
-@app.get("/search", response_model=List[ProductSchema], tags=["검색"])
+@app.get("/search", response_model=SearchResponse, tags=["검색"])
 def search_products(
     keyword: str = Query(..., description="검색할 상품명 (예: 패딩)"),
     min_price: int = Query(None, description="최소 가격"),
@@ -121,14 +125,17 @@ def search_products(
         response = client.search(body=search_query, index=INDEX_NAME)
     except Exception as e:
         print(f"Error: {e}")
-        return []
+        return {"total": 0, "items": []}
 
-    results = [hit["_source"] for hit in response["hits"]["hits"]]
+    total_hits = response["hits"]["total"]["value"]
+    items = [hit["_source"] for hit in response["hits"]["hits"]]
     
+    result_data = {"total": total_hits, "items": items}
+
     # --- [3. 결과 캐싱] ---
-    set_cache(cache_key, results, ttl=300)  # 5분간 캐시
+    set_cache(cache_key, result_data, ttl=300)  # 5분간 캐시
     
-    return results
+    return result_data
 
 # 터미널에서 'python api_server.py'로 실행할 때를 위한 코드
 if __name__ == "__main__":

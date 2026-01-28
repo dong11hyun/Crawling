@@ -61,10 +61,10 @@
             background-color: #333;
         }
 
-        /* Grid Layout: 가로 3개 배치 (반응형) */
+        /* Grid Layout: 가로 4개 배치 (반응형) */
         .results {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
             gap: 20px;
             margin-top: 20px;
         }
@@ -268,22 +268,27 @@
                 const response = await fetch(`http://127.0.0.1:8000/search?keyword=${currentKeyword}&skip=${currentSkip}`);
                 if (!response.ok) throw new Error("서버 응답 오류");
 
-                const data = await response.json();
+                const { total, items } = await response.json();
 
                 document.getElementById('loading').style.display = "none";
 
-                if (data.length === 0) {
+                if (items.length === 0) {
                     isFinished = true;
                     if (currentSkip === 0) {
                         document.getElementById('results').innerHTML = "<div style='text-align:center; color:#888; grid-column: 1/-1;'>검색 결과가 없습니다. 😢</div>";
+                        document.getElementById('count-display').innerText = "총 0개의 상품이 검색되었습니다.";
                     }
                     return;
                 }
 
-                renderItems(data);
+                if (currentSkip === 0) {
+                    document.getElementById('count-display').innerText = `총 ${total.toLocaleString()}개의 상품이 검색되었습니다.`;
+                }
+
+                renderItems(items);
 
                 // 데이터가 20개 미만이면 더 이상 없다는 뜻
-                if (data.length < 20) {
+                if (items.length < 20) {
                     isFinished = true;
                 } else {
                     currentSkip += 20; // 다음 페이지 준비
