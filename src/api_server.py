@@ -9,6 +9,8 @@ from fastapi import FastAPI, Query
 from opensearchpy import OpenSearch
 from pydantic import BaseModel
 from typing import List, Optional
+import glob # 추가
+import json # 추가
 # api_server.py 상단 임포트 부분에 추가
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import BackgroundTasks
@@ -172,6 +174,33 @@ def get_crawl_status():
     현재 크롤링 진행 상황을 반환합니다.
     """
     return CRAWL_PROGRESS
+
+@app.get("/latest-crawl", tags=["크롤링"])
+def get_latest_crawl_result():
+    """
+    가장 최근에 수집된 JSON 파일의 내용을 반환합니다.
+    """
+    # data 폴더 내의 crawl_result_*.json 패턴 검색
+    list_of_files = glob.glob('data/crawl_result_*.json')
+    
+    if not list_of_files:
+        return {"total": 0, "items": [], "message": "아직 수집된 데이터가 없습니다."}
+        
+    # 수정 시간 기준 최신 파일 찾기
+    latest_file = max(list_of_files, key=os.path.getmtime)
+    
+    try:
+        with open(latest_file, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            
+        return {
+            "total": len(data), 
+            "items": data, 
+            "filename": os.path.basename(latest_file),
+            "message": "최근 수집 데이터를 불러왔습니다."
+        }
+    except Exception as e:
+        return {"total": 0, "items": [], "message": f"파일 읽기 오류: {str(e)}"}
 
 # 터미널에서 'python api_server.py'로 실행할 때를 위한 코드
 if __name__ == "__main__":

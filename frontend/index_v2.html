@@ -86,6 +86,14 @@
             background-color: #a4b0be;
         }
 
+        button.btn-latest {
+            background-color: #2ed573;
+        }
+
+        button.btn-latest:hover {
+            background-color: #26af61;
+        }
+
         /* Crawler Modal */
         .modal-overlay {
             display: none;
@@ -346,6 +354,7 @@
                 <div style="display:flex; gap:5px;">
                     <button class="btn-crawl" onclick="startCrawl()">데이터 수집</button>
                     <button class="btn-stop" onclick="stopCrawl()">중지</button>
+                    <button class="btn-latest" onclick="loadLatestResults()">최근 결과</button>
                 </div>
             </div>
         </div>
@@ -628,6 +637,35 @@
                 alert(resData.message);
             } catch (e) {
                 alert("중지 요청 실패: " + e.message);
+            }
+        }
+
+        async function loadLatestResults() {
+            isLoading = true;
+            document.getElementById('loading').style.display = "block";
+            document.getElementById('results').innerHTML = ""; // 초기화
+
+            try {
+                const response = await fetch('http://127.0.0.1:8000/latest-crawl');
+                const data = await response.json();
+
+                if (data.total === 0) {
+                    alert(data.message);
+                    return;
+                }
+
+                document.getElementById('count-display').innerText = `📄 ${data.filename} (${data.total}개 로드됨)`;
+                renderItems(data.items);
+
+                // 검색 상태 초기화 (무한 스크롤 방지 등)
+                currentKeyword = "";
+                isFinished = true; // 추가 로딩 없음
+
+            } catch (e) {
+                alert("불러오기 실패: " + e.message);
+            } finally {
+                isLoading = false;
+                document.getElementById('loading').style.display = "none";
             }
         }
     </script>
