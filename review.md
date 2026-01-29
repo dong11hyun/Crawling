@@ -53,6 +53,9 @@ def run_crawler(...):
     *   *Stability*: `lxml` 로드 실패 시 `html.parser`로 자동 전환되는 Fallback 로직 구현.
 2.  **Bulk Indexing**: OpenSearch 입장에서 가장 비싼 연산은 '연결 수립'입니다.
     *   데이터를 20개씩 모아서 `helpers.bulk()`로 한 번에 보냅니다. (I/O 비용 1/20 감소)
+3.  **Structured Logging**: `print` 디버깅 대신 Python `logging` 모듈로 교체.
+    *   `TimedRotatingFileHandler`를 사용하여 날짜별 로그 파일 로테이션 구현.
+    *   에러 발생 시 `exc_info=True`로 스택 트레이스 자동 기록.
 
 ---
 
@@ -176,3 +179,9 @@ def trigger_crawl(request: CrawlRequest, background_tasks: BackgroundTasks):
 1.  **확장성**: 하이브리드 크롤러 구조로 수집 속도와 범위를 확보했습니다.
 2.  **안정성**: Graceful Shutdown과 이중 저장소(JSONL + OpenSearch)로 데이터 유실을 방지했습니다.
 3.  **성능**: 캐싱(Redis)과 역색인(OpenSearch)을 통해 검색 Latency를 최소화했습니다.
+4.  **관측 가능성**: 구조화된 로깅과 날짜별 파일 로테이션으로 운영 환경 대비 기반을 마련했습니다.
+
+### 향후 확장 계획 (Future Work)
+*   **Distributed Crawling**: Celery + RabbitMQ를 도입하여 대규모 분산 수집 지원.
+*   **Data Integrity**: Pydantic 기반 엄격한 스키마 검증 파이프라인 구축.
+*   **ELK Stack**: 중앙집중식 로그 수집 및 Kibana 대시보드 연동.

@@ -37,18 +37,33 @@ index_body = {
     },
     "mappings": {
         "properties": {
-            "title": { # 상품명
+            "goodsNo": { "type": "integer" },
+            "title": {
                 "type": "text",
-                "analyzer": "korean_analyzer" # 한국어 분석 적용
+                "analyzer": "korean_analyzer",
+                "fields": {
+                    "keyword": { "type": "keyword" }
+                }
             },
-            "brand": { # 브랜드
-                "type": "keyword" # 정확히 일치해야 검색됨 (필터용)
-            },
-            "price": { # 가격
-                "type": "integer" # 숫자 계산 및 범위 검색용
-            },
+            "brand": { "type": "keyword" },
+            "price": { "type": "integer" },
+            "normalPrice": { "type": "integer" },
+            "saleRate": { "type": "integer" },
             "url": { "type": "keyword" },
-            "image_url": { "type": "keyword" }
+            "thumbnail": { "type": "keyword" },
+            "crawled_at": { "type": "date" },
+            "seller_info": {
+                "type": "object",
+                "properties": {
+                    "company": { "type": "keyword" },
+                    "ceo": { "type": "keyword" },
+                    "biz_num": { "type": "keyword" },
+                    "license": { "type": "keyword" },
+                    "contact": { "type": "keyword" },
+                    "email": { "type": "keyword" },
+                    "address": { "type": "text" }
+                }
+            }
         }
     }
 }
