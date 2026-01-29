@@ -11,8 +11,11 @@ import time
 import json
 import random
 import os
+import logging
+from logging.handlers import TimedRotatingFileHandler
 from datetime import datetime
 from opensearchpy import OpenSearch, helpers  # helpers 추가 for bulk
+
 
 
 # ================= 설정 =================
@@ -41,11 +44,47 @@ OUTPUT_FILE = "data/crawl_result_{keyword}_{timestamp}.json"
 # 전역 중지 플래그
 STOP_CRAWLER_FLAG = False
 
+# 전역 로거 설정
+def setup_logger():
+    """로깅 설정 (File + Console)"""
+    log_dir = "logs"
+    os.makedirs(log_dir, exist_ok=True)
+    
+    logger = logging.getLogger("MusinsaCrawler")
+    logger.setLevel(logging.INFO)
+    
+    # 1. 파일 핸들러 (날짜별 로테이션)
+    filename = os.path.join(log_dir, "crawler.log")
+    file_handler = TimedRotatingFileHandler(
+        filename, when="midnight", interval=1, backupCount=7, encoding="utf-8"
+    )
+    file_handler.suffix = "%Y-%m-%d"
+    file_formatter = logging.Formatter(
+        "[%(asctime)s] [%(levelname)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+    )
+    file_handler.setFormatter(file_formatter)
+    
+    # 2. 콘솔 핸들러
+    console_handler = logging.StreamHandler()
+    console_formatter = logging.Formatter("[%(asctime)s] %(message)s", datefmt="%H:%M:%S")
+    console_handler.setFormatter(console_formatter)
+    
+    # 중복 방지
+    if not logger.handlers:
+        logger.addHandler(file_handler)
+        logger.addHandler(console_handler)
+        
+    return logger
+
+logger = setup_logger()
+
+
 def stop_crawling():
     """크롤링 중지"""
     global STOP_CRAWLER_FLAG
     STOP_CRAWLER_FLAG = True
-    print("\n🛑 크롤링 중지 요청됨!")
+    logger.warning("\n🛑 크롤링 중지 요청됨!")
+
 
 # 전역 진행 상태 (초기값)
 CRAWL_PROGRESS = {
@@ -126,7 +165,7 @@ def get_product_list(keyword: str, page: int, size: int = 60, session=None) -> l
             response = session.get(url, params=params, headers=get_headers(), timeout=15)
             
             if response.status_code == 429:
-                print(f"   ⚠️ 429 Too Many Requests - 60초 대기...")
+                logger.warning(f"   ⚠️ 429 Too Many Requests - 60초 대기...")
                 time.sleep(60)
                 continue
             
@@ -135,7 +174,7 @@ def get_product_list(keyword: str, page: int, size: int = 60, session=None) -> l
             return data.get("data", {}).get("list", [])
             
         except Exception as e:
-            print(f"   ❌ API 호출 실패 (시도 {attempt+1}/3): {e}")
+            logger.error(f"   ❌ API 호출 실패 (시도 {attempt+1}/3): {e}", exc_info=True)
             time.sleep(10)
     
     return []
@@ -150,12 +189,10 @@ def get_seller_info(goods_no: int, session=None) -> dict:
             response = session.get(url, headers=get_headers(), timeout=15)
             
             if response.status_code == 429:
-                print(f"   ⚠️ 429 Too Many Requests - 60초 대기...")
+                logger.warning(f"   ⚠️ 429 Too Many Requests - 60초 대기...")
                 time.sleep(60)
                 continue
                 
-            response.raise_for_status()
-            
             response.raise_for_status()
             
             # [최적화] lxml 파서 적용 (속도 3~5배 향상)
@@ -163,7 +200,7 @@ def get_seller_info(goods_no: int, session=None) -> dict:
             try:
                 soup = BeautifulSoup(response.text, 'lxml')
             except Exception as e:
-                # print(f"   ⚠️ lxml 로드 실패, 기본 파서 사용: {e}")
+                logger.debug(f"   ⚠️ lxml 로드 실패, 기본 파서 사용: {e}")
                 soup = BeautifulSoup(response.text, 'html.parser')
 
             next_data_script = soup.find('script', id='__NEXT_DATA__')
@@ -188,7 +225,7 @@ def get_seller_info(goods_no: int, session=None) -> dict:
             }
             
         except Exception as e:
-            print(f"   ❌ HTML 파싱 실패 (시도 {attempt+1}/3): {e}")
+            logger.error(f"   ❌ HTML 파싱 실패 (시도 {attempt+1}/3): {e}", exc_info=True)
             time.sleep(5)
     
     return {}
@@ -215,10 +252,10 @@ def flush_bulk_buffer(client, buffer: list):
 
     try:
         success, _ = helpers.bulk(client, buffer, refresh=True)
-        print(f"      🚀 [Bulk] {len(buffer)}개 아이템 OpenSearch 적재 완료")
+        logger.info(f"      🚀 [Bulk] {len(buffer)}개 아이템 OpenSearch 적재 완료")
         buffer.clear() # 버퍼 비우기
     except Exception as e:
-        print(f"      ❌ [Bulk] 적재 실패: {e}")
+        logger.error(f"      ❌ [Bulk] 적재 실패: {e}", exc_info=True)
 
 def add_to_bulk_buffer(buffer: list, data: dict, index_name: str = "musinsa_products"):
     """OpenSearch Bulk Buffer에 데이터 추가"""
@@ -251,11 +288,11 @@ def run_crawler(keyword: str = SEARCH_KEYWORD, max_products: int = MAX_PRODUCTS)
         "start_time": start_time
     })
     
-    print("=" * 60)
-    print(f"🚀 무신사 크롤러 v4 (안전 수집) 시작")
-    print(f"   검색어: {keyword}")
-    print(f"   목표: {max_products}개")
-    print("=" * 60)
+    logger.info("=" * 60)
+    logger.info(f"🚀 무신사 크롤러 v4 (안전 수집) 시작")
+    logger.info(f"   검색어: {keyword}")
+    logger.info(f"   목표: {max_products}개")
+    logger.info("=" * 60)
     
     # 세션 생성 (쿠키 유지)
     session = requests.Session()
@@ -265,21 +302,21 @@ def run_crawler(keyword: str = SEARCH_KEYWORD, max_products: int = MAX_PRODUCTS)
         os_client = get_opensearch_client()
         # 연결 테스트
         if os_client.ping():
-            print("   ✅ OpenSearch 연결 성공")
+            logger.info("   ✅ OpenSearch 연결 성공")
         else:
-            print("   ⚠️ OpenSearch 연결 실패 (Docker 확인 필요)")
+            logger.warning("   ⚠️ OpenSearch 연결 실패 (Docker 확인 필요)")
             os_client = None
     except Exception as e:
-        print(f"   ⚠️ OpenSearch 초기화 에러: {e}")
+        logger.error(f"   ⚠️ OpenSearch 초기화 에러: {e}", exc_info=True)
         os_client = None
     
     # 이전 진행 상태 로드
     collected_ids = load_progress()
     if collected_ids:
-        print(f"📂 이전 진행 상태 복원: {len(collected_ids)}개 이미 수집됨")
+        logger.info(f"📂 이전 진행 상태 복원: {len(collected_ids)}개 이미 수집됨")
     
     # 1단계: 상품 목록 수집
-    print(f"\n🔍 [1단계] 상품 목록 API 호출 중...")
+    logger.info(f"\n🔍 [1단계] 상품 목록 API 호출 중...")
     
     # [최적화] Bulk Indexing을 위한 버퍼
     bulk_buffer = []
@@ -289,21 +326,21 @@ def run_crawler(keyword: str = SEARCH_KEYWORD, max_products: int = MAX_PRODUCTS)
     
     while len(all_products) < max_products:
         if STOP_CRAWLER_FLAG:
-            print("   🛑 [1단계] 사용자 중단 요청으로 종료")
+            logger.warning("   🛑 [1단계] 사용자 중단 요청으로 종료")
             CRAWL_PROGRESS["status"] = "stopped"
             break
 
         products = get_product_list(keyword, page, BATCH_SIZE, session)
         
         if not products:
-            print(f"   더 이상 상품이 없습니다.")
+            logger.info(f"   더 이상 상품이 없습니다.")
             break
         
         # 이미 수집한 항목 제외
         new_products = [p for p in products if p.get('goodsNo') not in collected_ids]
         all_products.extend(new_products)
         
-        print(f"   페이지 {page}: {len(new_products)}개 추가 (총 {len(all_products)}개)")
+        logger.info(f"   페이지 {page}: {len(new_products)}개 추가 (총 {len(all_products)}개)")
         
         page += 1
         safe_delay(API_DELAY)
@@ -312,11 +349,12 @@ def run_crawler(keyword: str = SEARCH_KEYWORD, max_products: int = MAX_PRODUCTS)
             all_products = all_products[:max_products]
             break
     
-    print(f"   ✅ 수집할 상품: {len(all_products)}개")
+    
+    logger.info(f"   ✅ 수집할 상품: {len(all_products)}개")
     
     # 2단계: 판매자 정보 수집
-    print(f"\n📦 [2단계] 판매자 정보 수집 중...")
-    print(f"   💾 점진적 저장 활성화 (JSONL)")
+    logger.info(f"\n📦 [2단계] 판매자 정보 수집 중...")
+    logger.info(f"   💾 점진적 저장 활성화 (JSONL)")
     
     # JSONL 파일 경로
     jsonl_path = JSONL_FILE.format(keyword=keyword)
@@ -324,13 +362,13 @@ def run_crawler(keyword: str = SEARCH_KEYWORD, max_products: int = MAX_PRODUCTS)
     # 기존 JSONL 데이터 로드 (재개 시)
     results = load_jsonl(jsonl_path)
     if results:
-        print(f"   📂 기존 데이터 복원: {len(results)}개")
+        logger.info(f"   📂 기존 데이터 복원: {len(results)}개")
     
     total = len(all_products)
     
     for idx, product in enumerate(all_products):
         if STOP_CRAWLER_FLAG:
-            print(f"   🛑 [2단계] 사용자 중단 요청으로 종료 ({idx}개 수집됨)")
+            logger.warning(f"   🛑 [2단계] 사용자 중단 요청으로 종료 ({idx}개 수집됨)")
             CRAWL_PROGRESS["status"] = "stopped"
             break
 
@@ -339,7 +377,7 @@ def run_crawler(keyword: str = SEARCH_KEYWORD, max_products: int = MAX_PRODUCTS)
         
         # 진행률 표시
         progress = (idx + 1) / total * 100
-        print(f"   [{idx+1}/{total}] ({progress:.1f}%) {goods_name}...")
+        logger.info(f"   [{idx+1}/{total}] ({progress:.1f}%) {goods_name}...")
         
         # 판매자 정보 추출
         seller_info = get_seller_info(goods_no, session)
@@ -376,8 +414,8 @@ def run_crawler(keyword: str = SEARCH_KEYWORD, max_products: int = MAX_PRODUCTS)
         collected_ids.add(goods_no)
         if (idx + 1) % 100 == 0:
             save_progress(collected_ids)
-            print(f"   💾 진행 상태 저장 완료 ({idx+1}개)")
-            print(f"   📄 JSONL 파일: {jsonl_path}")
+            logger.info(f"   💾 진행 상태 저장 완료 ({idx+1}개)")
+            logger.info(f"   📄 JSONL 파일: {jsonl_path}")
         
         # 딜레이
         safe_delay(HTML_DELAY)
@@ -394,7 +432,7 @@ def run_crawler(keyword: str = SEARCH_KEYWORD, max_products: int = MAX_PRODUCTS)
 
     # [최적화] 남은 버퍼 Flush
     if os_client and bulk_buffer:
-        print("   🧹 남은 데이터 Bulk 적재 중...")
+        logger.info("   🧹 남은 데이터 Bulk 적재 중...")
         flush_bulk_buffer(os_client, bulk_buffer)
     
     # 진행 상태 및 JSONL 정리
@@ -403,12 +441,12 @@ def run_crawler(keyword: str = SEARCH_KEYWORD, max_products: int = MAX_PRODUCTS)
     if os.path.exists(jsonl_path):
         os.remove(jsonl_path)  # JSONL은 JSON으로 변환 완료 후 삭제
     
-    print("\n" + "=" * 60)
-    print(f"🎉 수집 완료!")
-    print(f"   총 수집: {len(results)}개")
-    print(f"   소요 시간: {elapsed/60:.1f}분")
-    print(f"   저장 위치: {output_path}")
-    print("=" * 60)
+    logger.info("\n" + "=" * 60)
+    logger.info(f"🎉 수집 완료!")
+    logger.info(f"   총 수집: {len(results)}개")
+    logger.info(f"   소요 시간: {elapsed/60:.1f}분")
+    logger.info(f"   저장 위치: {output_path}")
+    logger.info("=" * 60)
     
     # 완료 상태 업데이트
     if not STOP_CRAWLER_FLAG:

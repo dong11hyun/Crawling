@@ -46,7 +46,7 @@ def run_crawler(...):
             print("🛑 사용자 요청으로 안전 종료 (Graceful Shutdown)")
             # ★ 중요: 지금까지 수집한 데이터를 저장하고 종료 (데이터 유실 방지)
             break
-
+```
 ### 최적화 (Optimization) [NEW]
 **"네트워크가 쉴 때 CPU도 쉬게 하자"**
 1.  **lxml Parser**: C언어 기반 파서 도입. 복잡한 DOM 트리 분석 속도를 5배 향상 시켜 CPU 병목 제거.
