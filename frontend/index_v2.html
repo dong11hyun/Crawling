@@ -391,7 +391,16 @@
 
             <div class="form-group">
                 <label>수집 개수 (Max Products)</label>
-                <input type="number" id="crawlCount" value="200" min="10" max="1000">
+                <input type="number" id="crawlCount" value="200" min="10" max="50000">
+            </div>
+
+            <div class="form-group">
+                <label>크롤러 버전</label>
+                <select id="crawlVersion"
+                    style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px; font-size:14px;">
+                    <option value="v4">v4 (안정) - 순차 처리</option>
+                    <option value="v5" selected>v5 (빠름) - 병렬 2워커</option>
+                </select>
             </div>
 
             <div class="modal-actions">
@@ -406,6 +415,7 @@
         let currentKeyword = "";
         let isLoading = false;
         let isFinished = false;
+        let currentCrawlVersion = "v4"; // 현재 실행 중인 크롤러 버전
 
         // 1. 검색 초기화 (새로운 검색)
         function resetSearch() {
@@ -545,6 +555,7 @@
         async function submitCrawl() {
             const keyword = document.getElementById('crawlKeyword').value.trim();
             const count = parseInt(document.getElementById('crawlCount').value);
+            const version = document.getElementById('crawlVersion').value;
 
             if (!keyword) {
                 alert("검색어를 입력해주세요.");
@@ -557,6 +568,7 @@
 
             // 모달 닫기
             closeModal();
+            currentCrawlVersion = version; // 버전 저장
 
             try {
                 const response = await fetch(`http://127.0.0.1:8000/crawl`, {
@@ -564,13 +576,13 @@
                     headers: {
                         "Content-Type": "application/json"
                     },
-                    body: JSON.stringify({ keyword: keyword, max_products: count })
+                    body: JSON.stringify({ keyword: keyword, max_products: count, version: version })
                 });
 
                 if (response.ok) {
                     const resData = await response.json();
                     alert(`🚀 ${resData.message}`);
-                    startPolling(); // 폴링 시작
+                    startPolling(version); // 버전 전달
                 } else {
                     const err = await response.text();
                     alert("실패했습니다: " + err);
@@ -582,13 +594,17 @@
 
         let pollInterval = null;
 
-        function startPolling() {
+        function startPolling(version = 'v4') {
             if (pollInterval) clearInterval(pollInterval);
             document.getElementById('crawl-progress-container').style.display = 'block';
 
+            // 버전 표시
+            const versionLabel = version === 'v5' ? 'v5 (병렬)' : 'v4 (안정)';
+            document.getElementById('crawl-status-text').innerText = `데이터 수집 중... 🐜 [${versionLabel}]`;
+
             pollInterval = setInterval(async () => {
                 try {
-                    const res = await fetch('http://127.0.0.1:8000/crawl-status');
+                    const res = await fetch(`http://127.0.0.1:8000/crawl-status?version=${version}`);
                     const data = await res.json();
                     updateProgressUI(data);
 
@@ -632,7 +648,7 @@
             if (!confirm("진행 중인 크롤링을 중지하시겠습니까?")) return;
 
             try {
-                const response = await fetch(`http://127.0.0.1:8000/stop-crawl`, { method: "POST" });
+                const response = await fetch(`http://127.0.0.1:8000/stop-crawl?version=${currentCrawlVersion}`, { method: "POST" });
                 const resData = await response.json();
                 alert(resData.message);
             } catch (e) {

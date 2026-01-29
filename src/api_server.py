@@ -14,7 +14,8 @@ import json # 추가
 # api_server.py 상단 임포트 부분에 추가
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import BackgroundTasks
-from v4_safe_crawler import run_crawler, stop_crawling, CRAWL_PROGRESS
+from v4_safe_crawler import run_crawler as run_crawler_v4, stop_crawling as stop_crawling_v4, CRAWL_PROGRESS as CRAWL_PROGRESS_V4
+from v5_fast_crawler import run_crawler as run_crawler_v5, stop_crawling as stop_crawling_v5, CRAWL_PROGRESS as CRAWL_PROGRESS_V5
 
 
 # [Day 3] CRUD API 라우터 임포트 (v4에서는 미사용으로 주석 처리)
@@ -146,34 +147,53 @@ def search_products(
 class CrawlRequest(BaseModel):
     keyword: str
     max_products: int = 100
+    version: str = "v4"  # "v4" or "v5"
 
 @app.post("/crawl", tags=["크롤링"])
 def trigger_crawl(request: CrawlRequest, background_tasks: BackgroundTasks):
     """
     백그라운드에서 크롤러를 실행합니다.
+    version: "v4" (안정) 또는 "v5" (빠름)
     """
-    # 백그라운드 작업 등록
-    background_tasks.add_task(run_crawler, keyword=request.keyword, max_products=request.max_products)
+    if request.version == "v5":
+        background_tasks.add_task(run_crawler_v5, keyword=request.keyword, max_products=request.max_products)
+        version_label = "v5 (병렬 처리)"
+    else:
+        background_tasks.add_task(run_crawler_v4, keyword=request.keyword, max_products=request.max_products)
+        version_label = "v4 (안정)"
     
     return {
-        "message": f"크롤링 작업이 시작되었습니다. (검색어: {request.keyword}, 목표: {request.max_products}개)",
-        "status": "processing"
+        "message": f"크롤링 작업이 시작되었습니다. (검색어: {request.keyword}, 목표: {request.max_products}개, 버전: {version_label})",
+        "status": "processing",
+        "version": request.version
     }
 
 @app.post("/stop-crawl", tags=["크롤링"])
-def request_stop_crawling():
+def request_stop_crawling(version: str = "v4"):
     """
     실행 중인 크롤링 작업을 즉시 중단합니다.
     """
-    stop_crawling()
-    return {"message": "크롤링 중지 요청을 보냈습니다.", "status": "stopped"}
+    if version == "v5":
+        stop_crawling_v5()
+    else:
+        stop_crawling_v4()
+    return {"message": "크롤링 중지 요청을 보냈습니다.", "status": "stopped", "version": version}
 
 @app.get("/crawl-status", tags=["크롤링"])
-def get_crawl_status():
+def get_crawl_status(version: str = None):
     """
     현재 크롤링 진행 상황을 반환합니다.
+    version이 지정되지 않으면 마지막 실행된 버전의 상태를 반환합니다.
     """
-    return CRAWL_PROGRESS
+    if version == "v5":
+        return CRAWL_PROGRESS_V5
+    elif version == "v4":
+        return CRAWL_PROGRESS_V4
+    else:
+        # 마지막으로 실행된 버전 반환
+        if CRAWL_PROGRESS_V5.get("start_time", 0) > CRAWL_PROGRESS_V4.get("start_time", 0):
+            return CRAWL_PROGRESS_V5
+        return CRAWL_PROGRESS_V4
 
 @app.get("/latest-crawl", tags=["크롤링"])
 def get_latest_crawl_result():

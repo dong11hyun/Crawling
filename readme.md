@@ -80,24 +80,46 @@ graph TD
 *   **OpenSearch Bulk Indexing**: 1건씩 저장하던 방식을 버퍼링 후 **20건씩 일괄 저장(Bulk Insert)**하도록 변경하여 DB 연결 오버헤드를 95% 줄였습니다.
 *   **Structured Logging**: `print` 디버깅을 `Python Logging` 모듈로 대체하고, 날짜별 로그 파일 로테이션(`TimedRotatingFileHandler`)을 도입하여 운영 환경 관측 가능성을 확보했습니다.
 
-### 4.2. 안전하고 정중한 크롤링 (Safe & Polite Crawling)
+### 4.2. v5 병렬 처리 아키텍처 (Parallel Processing Architecture) [v5]
+
+대규모 수집(20,000건 이상) 시 순차 처리의 한계를 극복하기 위해 `ThreadPoolExecutor` 기반 병렬 처리를 도입했습니다.
+
+```
+┌──────────────────┐     ┌────────────────────────────────────┐
+│  [1단계] API 호출  │     │        [2단계] HTML 파싱 (병렬)       │
+│  상품 목록 20,000개 │     │                                    │
+│  (goodsNo 리스트)   │ ───▶│   ┌────────────────────────────┐   │
+│                  │     │   │  Worker 1: 상품1 → 파싱 → 저장│   │
+└──────────────────┘     │   └────────────────────────────┘   │
+      ↓ 메모리         │   ┌────────────────────────────┐   │
+  all_products[]   │   │  Worker 2: 상품2 → 파싱 → 저장│   │
+                       │   └────────────────────────────┘   │
+                       └────────────────────────────────────┘
+```
+
+*   **2단계 분리**: 1단계(API 호출)는 순차 처리로 상품 목록을 메모리(RAM)에 적재하고, 2단계(HTML 파싱)는 병렬 처리로 속도를 극대화합니다.
+*   **ThreadPoolExecutor**: `max_workers=2`로 설정하여 동시에 2개 상품을 병렬 처리합니다. 네트워크 I/O 대기 시간이 겹쳐져 실제 속도는 1.5~2배 향상됩니다.
+*   **Thread-Safe 설계**: `threading.Lock`을 사용하여 JSONL 파일 쓰기와 Bulk 버퍼 접근 시 데이터 경합(Race Condition)을 방지합니다.
+*   **차단 방지**: 워커 수를 2개로 제한하고, 개별 워커에 `1.5초 + 랜덤 딜레이`를 적용하여 타겟 서버 부하를 최소화합니다.
+
+### 4.3. 안전하고 정중한 크롤링 (Safe & Polite Crawling)
 타겟 서버에 부하를 주지 않고 IP 차단을 회피하기 위해 다음 전략을 적용했습니다.
 *   **Adaptive Throttling**: 요청 간 랜덤 딜레이(`random.uniform(0.5, 1.5)`)를 주어 기계적인 패턴을 숨깁니다.
 *   **User-Agent Rotation**: 세션마다 헤더 정보를 무작위로 변경합니다.
 *   **Session Management**: `requests.Session`을 재사용하여 TCP 핸드쉐이크 오버헤드를 줄이고 Keep-Alive 연결을 유지합니다.
 
-### 4.3. 우아한 종료 메커니즘 (Graceful Shutdown)
+### 4.4. 우아한 종료 메커니즘 (Graceful Shutdown)
 일반적인 스크립트는 강제 종료 시 데이터가 유실되거나 파일이 깨질 위험이 있습니다. 이를 방지하기 위해 `STOP_CRAWLER_FLAG`를 도입했습니다.
 *   **Logic**: 크롤러 루프의 각 단계(페이지 처리 -> 아이템 처리)마다 전역 Atomic Flag를 확인합니다.
 *   **Action**: 종료 신호 감지 시, 수행 중인 아이템 처리를 완료하고 버퍼를 디스크에 기록(Flush)한 뒤 연결을 닫고 안전하게 종료합니다.
 
-### 4.4. 실시간 진행률 추적 (Real-time Progress Tracking)
+### 4.5. 실시간 진행률 추적 (Real-time Progress Tracking)
 복잡한 WebSocket 대신 관리 용이성을 위해 **Short Polling** 패턴을 채택했습니다.
 *   **Backend**: `CRAWL_PROGRESS` 전역 딕셔너리가 Atomic한 상태(현재 개수, 상태 등)를 관리합니다.
 *   **Frontend**: `GET /crawl-status`를 1초마다 호출합니다.
 *   **UX**: 이동 평균(Moving Average) 기반으로 처리 속도를 계산하여 **ETA(예상 남은 시간)**를 사용자에게 시각적으로 제공합니다.
 
-### 4.5. 무상태 "최근 결과" 보기 (Stateless Inspection)
+### 4.6. 무상태 "최근 결과" 보기 (Stateless Inspection)
 사용자는 방금 수집한 데이터의 정합성을 검증하길 원합니다. DB 쿼리는 과거 데이터와 섞일 우려가 있습니다.
 *   **Implementation**: `GET /latest-crawl` API는 DB를 거치지 않고, 파일 시스템에서 가장 최근 수정된 `crawl_result_*.json` 파일을 직접 스캔하여 반환합니다.
 *   **Benefit**: 이를 통해 사용자는 방금 수행한 작업의 **불변 스냅샷(Immutable Snapshot)**을 100% 신뢰할 수 있는 상태로 확인할 수 있습니다.

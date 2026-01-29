@@ -31,3 +31,5 @@ airflow/logs/
 .data/
 data
 data/
+
+logs/
