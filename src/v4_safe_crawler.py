@@ -12,7 +12,8 @@ import json
 import random
 import os
 from datetime import datetime
-from opensearchpy import OpenSearch  # OpenSearch 클라이언트 추가
+from opensearchpy import OpenSearch, helpers  # helpers 추가 for bulk
+
 
 # ================= 설정 =================
 SEARCH_KEYWORD = "패딩"
@@ -155,7 +156,16 @@ def get_seller_info(goods_no: int, session=None) -> dict:
                 
             response.raise_for_status()
             
-            soup = BeautifulSoup(response.text, 'html.parser')
+            response.raise_for_status()
+            
+            # [최적화] lxml 파서 적용 (속도 3~5배 향상)
+            # 실패 시 기본 파서로 폴백 (안전장치)
+            try:
+                soup = BeautifulSoup(response.text, 'lxml')
+            except Exception as e:
+                # print(f"   ⚠️ lxml 로드 실패, 기본 파서 사용: {e}")
+                soup = BeautifulSoup(response.text, 'html.parser')
+
             next_data_script = soup.find('script', id='__NEXT_DATA__')
             
             if not next_data_script:
@@ -198,26 +208,31 @@ def get_opensearch_client():
     )
 
 
-def index_to_opensearch(client, data: dict, index_name: str = "musinsa_products"):
-    """OpenSearch에 데이터 실시간 적재"""
-    try:
-        # ID를 지정하여 중복 방지 (Upsert 효과)
-        doc_id = str(data['goodsNo'])
-        
-        # _index, _source 구조 제거하고 순수 데이터만 적재 (OpenSearchpy가 알아서 처리)
-        # 단, 날짜 필드는 ISO 형식으로 맞추는게 좋음
-        if 'crawled_at' not in data:
-            data['crawled_at'] = datetime.now().isoformat()
+def flush_bulk_buffer(client, buffer: list):
+    """Bulk Buffer에 있는 데이터を一括 OpenSearch에 적재"""
+    if not buffer:
+        return
 
-        client.index(
-            index=index_name,
-            body=data,
-            id=doc_id,
-            refresh=True # 즉시 검색 가능하게 함 (부하가 조금 있지만 실시간성 위해)
-        )
-        # print(f"      🚀 OpenSearch 적재 완료: {doc_id}")
+    try:
+        success, _ = helpers.bulk(client, buffer, refresh=True)
+        print(f"      🚀 [Bulk] {len(buffer)}개 아이템 OpenSearch 적재 완료")
+        buffer.clear() # 버퍼 비우기
     except Exception as e:
-        print(f"      ❌ OpenSearch 적재 실패: {e}")
+        print(f"      ❌ [Bulk] 적재 실패: {e}")
+
+def add_to_bulk_buffer(buffer: list, data: dict, index_name: str = "musinsa_products"):
+    """OpenSearch Bulk Buffer에 데이터 추가"""
+    doc_id = str(data['goodsNo'])
+    
+    if 'crawled_at' not in data:
+        data['crawled_at'] = datetime.now().isoformat()
+    
+    action = {
+        "_index": index_name,
+        "_id": doc_id,
+        "_source": data
+    }
+    buffer.append(action)
 
 
 def run_crawler(keyword: str = SEARCH_KEYWORD, max_products: int = MAX_PRODUCTS):
@@ -266,6 +281,9 @@ def run_crawler(keyword: str = SEARCH_KEYWORD, max_products: int = MAX_PRODUCTS)
     # 1단계: 상품 목록 수집
     print(f"\n🔍 [1단계] 상품 목록 API 호출 중...")
     
+    # [최적화] Bulk Indexing을 위한 버퍼
+    bulk_buffer = []
+
     all_products = []
     page = 1
     
@@ -346,9 +364,13 @@ def run_crawler(keyword: str = SEARCH_KEYWORD, max_products: int = MAX_PRODUCTS)
         # 실시간 진행률 업데이트
         CRAWL_PROGRESS["current"] = len(results)
         
-        # ✅ OpenSearch 실시간 적재
         if os_client:
-            index_to_opensearch(os_client, result)
+            # [최적화] 바로 index하지 않고 버퍼에 추가
+            add_to_bulk_buffer(bulk_buffer, result)
+            
+            # 버퍼가 20개 차면 Flush
+            if len(bulk_buffer) >= 20:
+                flush_bulk_buffer(os_client, bulk_buffer)
         
         # 진행 상태 저장 (100개마다)
         collected_ids.add(goods_no)
@@ -366,8 +388,14 @@ def run_crawler(keyword: str = SEARCH_KEYWORD, max_products: int = MAX_PRODUCTS)
     output_path = OUTPUT_FILE.format(keyword=keyword, timestamp=timestamp)
     
     os.makedirs('data', exist_ok=True)
+    os.makedirs('data', exist_ok=True)
     with open(output_path, 'w', encoding='utf-8') as f:
         json.dump(results, f, ensure_ascii=False, indent=2)
+
+    # [최적화] 남은 버퍼 Flush
+    if os_client and bulk_buffer:
+        print("   🧹 남은 데이터 Bulk 적재 중...")
+        flush_bulk_buffer(os_client, bulk_buffer)
     
     # 진행 상태 및 JSONL 정리
     if os.path.exists(PROGRESS_FILE):
