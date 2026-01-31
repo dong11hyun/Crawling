@@ -24,25 +24,25 @@
 
 ```mermaid
 graph TD
-    User[User / Frontend] -->|1. 검색 요청| API[FastAPI Server]
-    User -->|2. 크롤링 트리거| API
-    User -->|3. 실시간 상태 조회| API
+    User["User / Frontend"] -->|"1. 검색 요청"| API["FastAPI Server"]
+    User -->|"2. 크롤링 트리거"| API
+    User -->|"3. 실시간 상태 조회"| API
     
-    subgraph "Backend Layer"
-        API -->|Task Dispatch| BG[Background Tasks]
-        BG -->|Run| Crawler[Safe Crawler (v4)]
+    subgraph Backend["Backend Layer"]
+        API -->|"Task Dispatch"| BG["Background Tasks"]
+        BG -->|"Run"| Crawler["Safe Crawler v4"]
         
-        Crawler -->|API Request| Target[무신사 서버]
-        Target -->|JSON/HTML| Crawler
+        Crawler -->|"API Request"| Target["무신사 서버"]
+        Target -->|"JSON/HTML"| Crawler
         
-        Crawler -->|Real-time Indexing| OS[(OpenSearch)]
-        Crawler -->|Incremental Backup| Disk[JSONL Storage]
-        Crawler -->|Update State| Global[Global State Store]
+        Crawler -->|"Real-time Indexing"| OS[("OpenSearch")]
+        Crawler -->|"Incremental Backup"| Disk["JSONL Storage"]
+        Crawler -->|"Update State"| Global["Global State Store"]
     end
     
-    subgraph "Data Layer"
-        OS -->|Search Result| API
-        Disk -->|Raw File Load| API
+    subgraph Data["Data Layer"]
+        OS -->|"Search Result"| API
+        Disk -->|"Raw File Load"| API
     end
 ```
 
