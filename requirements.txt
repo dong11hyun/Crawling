@@ -1,34 +1,18 @@
-amqp==5.3.1
-asgiref==3.11.0
-billiard==4.2.3
-celery==5.5.3
-click==8.3.1
-click-didyoumean==0.3.1
-click-plugins==1.1.1.2
-click-repl==0.3.0
-colorama==0.4.6
-Django==5.2.8
-django_celery_results==2.6.0
-greenlet==3.2.4
-kombu==5.5.4
-packaging==25.0
-playwright==1.56.0
-prompt_toolkit==3.0.52
-psycopg2-binary==2.9.11
-pyee==13.0.0
-python-dateutil==2.9.0.post0
-redis
-lxml==7.1.0
-six==1.17.0
-sqlparse==0.5.3
-typing_extensions==4.15.0
-tzdata==2025.2
-vine==5.1.0
-wcwidth==0.2.14
+# 크롤링 & 검색
+requests
+beautifulsoup4
+lxml
+
+# OpenSearch
 opensearch-py
-pandas
+
+# API 서버
 fastapi
 uvicorn
-sqlalchemy==2.0.23
-pydantic==2.5.0
-beautifulsoup4
+pydantic
+
+# 캐싱
+redis
+
+# 벡터 검색
+sentence-transformers
