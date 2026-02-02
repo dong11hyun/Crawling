@@ -143,6 +143,65 @@ def search_products(
     
     return result_data
 
+# 🆕 벡터 검색 API (k-NN 시맨틱 검색)
+from embedding_model import encode_text, get_model
+
+@app.get("/search/vector", response_model=SearchResponse, tags=["검색"])
+def vector_search(
+    keyword: str = Query(..., description="검색할 키워드 (시맨틱 검색)"),
+    k: int = Query(20, description="반환할 상품 수"),
+    min_price: int = Query(None, description="최소 가격"),
+    max_price: int = Query(None, description="최대 가격")
+):
+    """
+    🚀 벡터 기반 시맨틱 검색
+    - 검색어를 벡터로 변환하여 유사한 상품 검색
+    - '패딩' 검색 시 '다운자켓', '푸퍼' 등 연관 상품도 검색됨
+    """
+    # 검색어를 벡터로 변환
+    query_vector = encode_text(keyword)
+    
+    # k-NN 검색 쿼리
+    knn_query = {
+        "size": k,
+        "query": {
+            "knn": {
+                "title_vector": {
+                    "vector": query_vector,
+                    "k": k
+                }
+            }
+        },
+        "_source": {
+            "excludes": ["title_vector"]  # 벡터 필드는 응답에서 제외
+        }
+    }
+    
+    # 가격 필터가 있으면 post_filter로 적용
+    if min_price or max_price:
+        price_filter = {"range": {"price": {}}}
+        if min_price:
+            price_filter["range"]["price"]["gte"] = min_price
+        if max_price:
+            price_filter["range"]["price"]["lte"] = max_price
+        knn_query["post_filter"] = {"bool": {"filter": [price_filter]}}
+    
+    try:
+        response = client.search(body=knn_query, index=INDEX_NAME)
+    except Exception as e:
+        print(f"Vector Search Error: {e}")
+        return {"total": 0, "items": []}
+    
+    total_hits = response["hits"]["total"]["value"]
+    items = []
+    for hit in response["hits"]["hits"]:
+        item = hit["_source"]
+        item["_score"] = hit["_score"]  # 유사도 점수 포함
+        items.append(item)
+    
+    return {"total": total_hits, "items": items}
+
+
 # 5. 크롤링 트리거 API (POST /crawl)
 class CrawlRequest(BaseModel):
     keyword: str

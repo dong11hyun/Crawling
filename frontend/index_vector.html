@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MUSINSA Vector Search 🚀</title>
+    <style>
+        body {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px 20px;
+        }
+
+        /* 헤더 영역 */
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 25px 35px;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            margin-bottom: 30px;
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo h1 {
+            font-size: 26px;
+            margin: 0;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .logo-badge {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 14px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 16px;
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        .search-input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+        }
+
+        .search-input::placeholder {
+            color: #aaa;
+        }
+
+        .btn {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        /* 검색 옵션 */
+        .search-options {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .option-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .option-group label {
+            font-size: 14px;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .option-group input {
+            width: 100px;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .option-group select {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        /* 설명 배너 */
+        .info-banner {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 15px 25px;
+            margin-bottom: 25px;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .info-banner .icon {
+            font-size: 24px;
+        }
+
+        .info-banner p {
+            margin: 0;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        /* 결과 카운트 */
+        .result-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            color: white;
+        }
+
+        .count-display {
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        /* 로딩 */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+            color: white;
+        }
+
+        .loading .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* 결과 그리드 */
+        .results {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .card a {
+            text-decoration: none;
+            color: inherit;
+        }
+
+        /* 유사도 점수 배지 */
+        .score-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: bold;
+            z-index: 10;
+        }
+
+        .card-img-wrapper {
+            width: 100%;
+            aspect-ratio: 1/1.2;
+            overflow: hidden;
+            background: #f8f8f8;
+        }
+
+        .card-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s;
+        }
+
+        .card:hover .card-img {
+            transform: scale(1.05);
+        }
+
+        .card-info {
+            padding: 15px;
+        }
+
+        .card-brand {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 5px;
+        }
+
+        .card-title {
+            font-size: 14px;
+            font-weight: 500;
+            margin: 0 0 10px 0;
+            color: #333;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            line-height: 1.4;
+            height: 39.2px;
+        }
+
+        .card-price-area {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .badge-sale {
+            background: #ff4757;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .card-price {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .price-normal {
+            font-size: 12px;
+            color: #aaa;
+            text-decoration: line-through;
+        }
+
+        /* 빈 결과 */
+        .empty-result {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 60px;
+            color: white;
+        }
+
+        .empty-result .icon {
+            font-size: 60px;
+            margin-bottom: 20px;
+        }
+
+        /* 다크 테마 토글 */
+        .toggle-link {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 14px;
+            text-decoration: none;
+        }
+
+        .toggle-link:hover {
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- 헤더 -->
+        <div class="header">
+            <div class="header-top">
+                <div class="logo">
+                    <h1>MUSINSA Vector Search</h1>
+                    <span class="logo-badge">AI Semantic</span>
+                </div>
+                <a href="index_v2.html" class="btn btn-secondary">📝 키워드 검색으로</a>
+            </div>
+
+            <div class="search-box">
+                <input type="text" id="searchInput" class="search-input" placeholder="예: 따뜻한 겨울 아우터, 캐주얼한 데일리룩..."
+                    onkeypress="if(event.key==='Enter') search()">
+                <button class="btn btn-primary" onclick="search()">🔍 시맨틱 검색</button>
+            </div>
+
+            <div class="search-options" style="margin-top: 15px;">
+                <div class="option-group">
+                    <label>결과 수:</label>
+                    <select id="resultCount">
+                        <option value="20">20개</option>
+                        <option value="50">50개</option>
+                        <option value="100" selected>100개</option>
+                        <option value="200">200개</option>
+                    </select>
+                </div>
+                <div class="option-group">
+                    <label>최소 가격:</label>
+                    <input type="number" id="minPrice" placeholder="0">
+                </div>
+                <div class="option-group">
+                    <label>최대 가격:</label>
+                    <input type="number" id="maxPrice" placeholder="무제한">
+                </div>
+            </div>
+        </div>
+
+        <!-- 설명 배너 -->
+        <div class="info-banner">
+            <span class="icon">🧠</span>
+            <p>
+                <strong>AI 벡터 검색</strong>은 단어가 정확히 일치하지 않아도 <strong>의미가 비슷한 상품</strong>을 찾아줍니다.<br>
+                예: "따뜻한 겨울 옷" 검색 → 패딩, 다운자켓, 푸퍼 등 연관 상품 모두 검색!
+            </p>
+        </div>
+
+        <!-- 결과 정보 -->
+        <div class="result-info">
+            <span id="countDisplay" class="count-display"></span>
+            <span id="searchTime" style="font-size: 14px; opacity: 0.8;"></span>
+        </div>
+
+        <!-- 로딩 -->
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p>AI가 유사한 상품을 찾고 있어요...</p>
+        </div>
+
+        <!-- 결과 -->
+        <div id="results" class="results"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+
+        async function search() {
+            const keyword = document.getElementById('searchInput').value.trim();
+            if (!keyword) {
+                alert('검색어를 입력해주세요!');
+                return;
+            }
+
+            const k = document.getElementById('resultCount').value;
+            const minPrice = document.getElementById('minPrice').value;
+            const maxPrice = document.getElementById('maxPrice').value;
+
+            // UI 초기화
+            document.getElementById('results').innerHTML = '';
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('countDisplay').innerText = '';
+            document.getElementById('searchTime').innerText = '';
+
+            const startTime = performance.now();
+
+            try {
+                let url = `${API_BASE}/search/vector?keyword=${encodeURIComponent(keyword)}&k=${k}`;
+                if (minPrice) url += `&min_price=${minPrice}`;
+                if (maxPrice) url += `&max_price=${maxPrice}`;
+
+                const response = await fetch(url);
+                const data = await response.json();
+
+                const endTime = performance.now();
+                const elapsed = ((endTime - startTime) / 1000).toFixed(2);
+
+                document.getElementById('loading').style.display = 'none';
+
+                if (!data.items || data.items.length === 0) {
+                    document.getElementById('results').innerHTML = `
+                        <div class="empty-result">
+                            <div class="icon">🔍</div>
+                            <h2>검색 결과가 없습니다</h2>
+                            <p>다른 검색어를 시도해보세요!</p>
+                        </div>
+                    `;
+                    document.getElementById('countDisplay').innerText = '검색 결과 없음';
+                    return;
+                }
+
+                document.getElementById('countDisplay').innerText =
+                    `"${keyword}" 관련 ${data.items.length}개 상품`;
+                document.getElementById('searchTime').innerText = `⏱️ ${elapsed}초`;
+
+                renderItems(data.items);
+
+            } catch (error) {
+                document.getElementById('loading').style.display = 'none';
+                alert(`에러: ${error.message}`);
+            }
+        }
+
+        function renderItems(items) {
+            const container = document.getElementById('results');
+
+            items.forEach(item => {
+                const formattedPrice = item.price.toLocaleString();
+                const normalPrice = item.normalPrice ?
+                    `<span class="price-normal">${item.normalPrice.toLocaleString()}원</span>` : '';
+
+                // 유사도 점수 (소수점 2자리)
+                const score = item._score ? (item._score * 100).toFixed(0) + '%' : '';
+
+                const html = `
+                    <div class="card">
+                        ${score ? `<span class="score-badge">유사도 ${score}</span>` : ''}
+                        <a href="${item.url}" target="_blank">
+                            <div class="card-img-wrapper">
+                                <img src="${item.thumbnail || 'https://via.placeholder.com/300x360?text=No+Image'}" 
+                                     class="card-img" 
+                                     alt="${item.title}"
+                                     loading="lazy"
+                                     onerror="this.src='https://via.placeholder.com/300x360?text=No+Image'">
+                            </div>
+                            <div class="card-info">
+                                <div class="card-brand">${item.brand}</div>
+                                <h3 class="card-title">${item.title}</h3>
+                                <div class="card-price-area">
+                                    ${item.saleRate ? `<span class="badge-sale">${item.saleRate}%</span>` : ''}
+                                    <span class="card-price">${formattedPrice}원</span>
+                                    ${normalPrice}
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', html);
+            });
+        }
+
+        // 페이지 로드시 기본 검색
+        document.getElementById('searchInput').value = '패딩';
+    </script>
+</body>
+
+</html>
