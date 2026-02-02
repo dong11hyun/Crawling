@@ -1,4 +1,4 @@
-# 크롤링 & 검색
+# Crawling & Search
 requests
 beautifulsoup4
 lxml
@@ -6,13 +6,13 @@ lxml
 # OpenSearch
 opensearch-py
 
-# API 서버
+# API Server
 fastapi
 uvicorn
 pydantic
 
-# 캐싱
+# Caching
 redis
 
-# 벡터 검색
+# Vector Search
 sentence-transformers
