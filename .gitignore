@@ -28,8 +28,6 @@ Thumbs.db
 # Airflow Logs
 airflow/logs/
 
-.data/
-data
-data/
+
 
 logs/
