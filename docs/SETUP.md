@@ -26,13 +26,16 @@ python -m venv venv
 source venv/bin/activate
 ```
 
-### 2. 패키지 설치
+### 2. 패키지 설치 & Docker 재빌드
 
 ```bash
 pip install -r requirements.txt
 
 # 벡터 검색용 추가 패키지
 pip install sentence-transformers
+
+# 도커 재빌드
+docker-compose up --build -d
 ```
 
 ### 3. OpenSearch 실행 (Docker)
