@@ -87,11 +87,12 @@ def search_products(
     keyword: str = Query(..., description="검색할 상품명 (예: 패딩)"),
     min_price: int = Query(None, description="최소 가격"),
     max_price: int = Query(None, description="최대 가격"),
+    sort: str = Query(None, description="정렬 (price_asc, price_desc)"),
     skip: int = Query(0, description="검색 시작 위치 (페이지네이션)")  # 추가
 ):
     # --- [1. 캐시 확인] ---
-    # 캐시 키에 skip 포함 (페이지별로 캐싱)
-    cache_key = generate_cache_key("search", keyword=keyword, min_price=min_price, max_price=max_price, skip=skip)
+    # 캐시 키에 sort, skip 포함 (페이지별로 캐싱)
+    cache_key = generate_cache_key("search", keyword=keyword, min_price=min_price, max_price=max_price, sort=sort, skip=skip)
     cached_result = get_cache(cache_key)
     
     if cached_result is not None:
@@ -127,6 +128,13 @@ def search_products(
             price_range["range"]["price"]["lte"] = max_price
         search_query["query"]["bool"]["filter"].append(price_range)
 
+    # 정렬 처리
+    if sort == "price_asc":
+        search_query["sort"] = [{"price": {"order": "asc"}}]
+    elif sort == "price_desc":
+        search_query["sort"] = [{"price": {"order": "desc"}}]
+    # 기본값은 관련도순(_score)이므로 별도 설정 불필요
+
     try:
         response = client.search(body=search_query, index=INDEX_NAME)
     except Exception as e:
@@ -150,44 +158,66 @@ from embedding_model import encode_text, get_model
 def vector_search(
     keyword: str = Query(..., description="검색할 키워드 (시맨틱 검색)"),
     k: int = Query(20, description="반환할 상품 수"),
+    sort: str = Query(None, description="정렬 (price_asc, price_desc)"),
+    skip: int = Query(0, description="건너뛸 상품 수 (페이지네이션)"),
     min_price: int = Query(None, description="최소 가격"),
     max_price: int = Query(None, description="최대 가격")
 ):
     """
-    🚀 벡터 기반 시맨틱 검색
+    🚀 벡터 기반 시맨틱 검색 (페이지네이션 지원)
     - 검색어를 벡터로 변환하여 유사한 상품 검색
     - '패딩' 검색 시 '다운자켓', '푸퍼' 등 연관 상품도 검색됨
     """
     # 검색어를 벡터로 변환
     query_vector = encode_text(keyword)
     
-    # k-NN 검색 쿼리
-    knn_query = {
+    # script_score 쿼리 (페이지네이션 지원)
+    script_query = {
+        "from": skip,
         "size": k,
+        "min_score": 0.5,  # 유사도 50% 이상만 반환
+        "track_total_hits": True,  # 정확한 total 카운트
         "query": {
-            "knn": {
-                "title_vector": {
-                    "vector": query_vector,
-                    "k": k
+            "script_score": {
+                "query": {"match_all": {}},
+                "script": {
+                    "source": "knn_score",
+                    "lang": "knn",
+                    "params": {
+                        "field": "title_vector",
+                        "query_value": query_vector,
+                        "space_type": "cosinesimil"
+                    }
                 }
             }
         },
         "_source": {
-            "excludes": ["title_vector"]  # 벡터 필드는 응답에서 제외
+            "excludes": ["title_vector"]
         }
     }
     
-    # 가격 필터가 있으면 post_filter로 적용
+    # 정렬 처리
+    if sort == "price_asc":
+        script_query["sort"] = [{"price": {"order": "asc"}}]
+    elif sort == "price_desc":
+        script_query["sort"] = [{"price": {"order": "desc"}}]
+    
+    # 가격 필터가 있으면 bool query로 감싸기
     if min_price or max_price:
         price_filter = {"range": {"price": {}}}
         if min_price:
             price_filter["range"]["price"]["gte"] = min_price
         if max_price:
             price_filter["range"]["price"]["lte"] = max_price
-        knn_query["post_filter"] = {"bool": {"filter": [price_filter]}}
+        script_query["query"] = {
+            "script_score": {
+                "query": {"bool": {"filter": [price_filter]}},
+                "script": script_query["query"]["script_score"]["script"]
+            }
+        }
     
     try:
-        response = client.search(body=knn_query, index=INDEX_NAME)
+        response = client.search(body=script_query, index=INDEX_NAME)
     except Exception as e:
         print(f"Vector Search Error: {e}")
         return {"total": 0, "items": []}

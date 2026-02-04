@@ -1,6 +1,6 @@
-# 🛒 Musinsa Data Pipeline & Search Engine (v4)
+# 🛒 Musinsa Data Pipeline & Search Engine (v5)
 
-> **고성능, 내결함성을 갖춘 실시간 패션 데이터 수집 및 검색 시스템**
+> **AI 벡터 검색을 갖춘 고성능 패션 데이터 수집 및 시맨틱 검색 시스템**
 
 ---
 
@@ -10,7 +10,8 @@
 
 기존 버전의 확장성 및 안정성 문제를 해결하기 위해 **하이브리드 크롤러 아키텍처 (API + HTML 파싱)**와 **이중 저장 전략 (JSONL + OpenSearch)**을 도입했습니다. **FastAPI** 기반의 고성능 비동기 서버와 **OpenSearch**의 한국어 형태소 분석 기능을 결합하여, 수집된 데이터를 즉시 검색 가능한 상태로 제공합니다.
 
-### 핵심 성과 (v4)
+### 핵심 성과 (v5)
+*   **🆕 시맨틱 검색**: AI 벡터 임베딩 기반으로 **"패딩" 검색 시 "다운자켓", "푸퍼"** 등 연관 상품도 자동 검색.
 *   **성능 (Performance)**: 브라우저 자동화 방식(v2) 대비 **10배 이상의 수집 속도** 달성 (분당 약 1,000건 수집).
 *   **안정성 (Stability)**: 적응형 스로틀링(Throttling)과 User-Agent 로테이션을 통해 **429 Rate Limit 차단율 0%** 달성.
 *   **실시간성 (Real-time)**: 데이터 수집 수 밀리초(ms) 이내에 인덱싱 완료 및 검색 가능.
@@ -62,13 +63,18 @@ graph TD
 *   **Why FastAPI?**: I/O 바운드 작업(네트워크 요청, DB 쓰기)을 메인 스레드 차단 없이 처리하기 위한 **native asyncio** 지원이 필수적이었습니다.
 *   **Pydantic**: 엄격한 데이터 유효성 검사를 통해 오염된 데이터의 시스템 유입을 원천 차단합니다.
 
-### Search Engine: OpenSearch
+### Search Engine: OpenSearch + k-NN
 *   **Why OpenSearch?**: 단순 DB 쿼리로는 불가능한 복합 조건(Boolean, Range, Filter) 검색이 필요했습니다.
 *   **Nori Analyzer**: Elastic 계열의 기본 토크나이저는 한국어 처리에 취약합니다. `nori_tokenizer`를 적용하여 복합명사(예: '패딩조끼' -> '패딩', '조끼') 분해 성능을 극대화했습니다.
+*   **k-NN Plugin**: 벡터 기반 유사도 검색을 위해 HNSW 알고리즘과 코사인 유사도를 활용합니다.
 
 ### Crawler: Hybrid Approach (Requests + BeautifulSoup + lxml)
 *   **Why not Selenium/Playwright?**: 브라우저 자동화는 리소스(CPU/RAM) 소모가 크고 속도가 느립니다.
 *   **Solution**: 상품 목록 조회는 역공학된 내부 API를 사용하고, 상세 정보는 **C언어 기반의 고성능 파서 `lxml`**을 사용하는 하이브리드 방식을 채택했습니다. 이는 API의 속도와 HTML 파싱의 정보량을 모두 취하는 전략입니다.
+
+### Vector Embedding: sentence-transformers
+*   **Model**: `paraphrase-multilingual-MiniLM-L12-v2` (384차원, 50개 언어 지원)
+*   **Why?**: 한국어 지원, 무료, 빠른 추론 속도. 상품 title을 벡터로 변환하여 의미 기반 검색 지원.
 
 ---
 
@@ -130,7 +136,8 @@ graph TD
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
-| `GET` | `/search` | 키워드, 가격 범위, 페이지네이션을 포함한 상품 검색. |
+| `GET` | `/search` | 키워드 검색 (가격 정렬, 페이지네이션 지원). |
+| `GET` | `/search/vector` | 🆕 **AI 시맨틱 검색** (의미 기반 검색, 가격 정렬, 페이지네이션). |
 | `POST` | `/crawl` | 백그라운드 크롤링 작업을 큐에 등록하고 시작. |
 | `POST` | `/stop-crawl` | 실행 중인 크롤러에 우아한 종료(Graceful Stop) 신호 전송. |
 | `GET` | `/crawl-status` | 실시간 진행 상황(처리 개수, 상태) 반환. |
@@ -192,7 +199,8 @@ python src/v4_safe_crawler.py 패딩 50
 
 | 서비스 | URL | 용도 |
 | :--- | :--- | :--- |
-| **🔍 Search UI** | [http://localhost:8000/frontend/index_v2.html](http://localhost:8000/frontend/index_v2.html) | 최종 사용자용 검색/크롤링 웹 인터페이스 |
+| **🔍 Search UI** | [http://localhost:8000/frontend/index_v2.html](http://localhost:8000/frontend/index_v2.html) | 키워드 검색 웹 인터페이스 |
+| **🧠 Vector Search** | [http://localhost:8000/frontend/index_vector.html](http://localhost:8000/frontend/index_vector.html) | 🆕 AI 시맨틱 검색 인터페이스 |
 | **📄 Swagger UI** | [http://localhost:8000/docs](http://localhost:8000/docs) | API 명세 확인 및 직접 테스트 |
 | **📊 OS Dashboards** | [http://localhost:5601](http://localhost:5601) | 데이터 시각화 및 OpenSearch 인덱스 직접 조회 |
 
@@ -206,14 +214,22 @@ B2_crawling/
 ├── logs/                       # 크롤러 로그 파일 (crawler.log)
 ├── frontend/                   # 웹 인터페이스
 │   ├── index.html              # 기본 검색 UI
-│   └── index_v2.html           # v2 모던 UI (Grid, Modal, Dashboard)
+│   ├── index_v2.html           # v2 모던 UI (Grid, Modal, Dashboard)
+│   └── index_vector.html       # 🆕 AI 벡터 검색 UI
 ├── src/                        # 백엔드 소스 코드
 │   ├── api_server.py           # FastAPI 엔트리포인트 & 라우터
-│   ├── v4_safe_crawler.py      # 핵심 크롤러 로직 (The Engine)
-│   ├── v3_fast_crawler.py      # 이전 버전 크롤러 (참고용)
-│   ├── init_opensearch.py      # 인덱스 매핑 & Nori 분석기 설정
+│   ├── embedding_model.py      # 🆕 임베딩 모델 (sentence-transformers)
+│   ├── init_opensearch_knn.py  # 🆕 k-NN 인덱스 설정
+│   ├── generate_embeddings.py  # 🆕 벡터 생성 & 적재
+│   ├── v5_fast_crawler.py      # 핵심 크롤러 로직 (병렬 처리)
+│   ├── v4_safe_crawler.py      # 안전 크롤러 (순차 처리)
+│   ├── init_opensearch.py      # 기본 인덱스 설정
 │   ├── cache.py                # Redis 캐싱 유틸리티
 │   └── routers/                # API 라우터 모듈 (확장용)
+├── docs/                       # 🆕 문서
+│   ├── SETUP.md                # 설치 가이드
+│   ├── vector_search.md        # 벡터 검색 구현 문서
+│   └── vector_search_원리.md   # 벡터 검색 원리 설명
 ├── archive(과거_버전)/         # 이전 버전 코드 보관소
 ├── docker-compose.yml          # 인프라 구성 (OpenSearch, Redis)
 ├── requirements.txt            # 의존성 패키지 목록
@@ -225,10 +241,11 @@ B2_crawling/
 
 ## 8. 향후 로드맵 (Future Roadmap)
 
-1.  **Distributed Crawling**: **Celery**와 **RabbitMQ**를 도입하여 대규모(100만 건 이상) 수집을 위한 분산 처리를 구현합니다.
-2.  **Proxy Rotation**: 상용 프록시 풀을 연동하여 공격적인 수집 시에도 차단 위험을 원천 봉쇄합니다.
-3.  **Advanced Observability (ELK Stack)**: 현재의 파일 로깅을 넘어, Logstash/Filebeat를 통해 로그를 중앙 수집하고 **Kibana**로 실시간 에러 대시보드를 구축합니다.
-4.  **Data Integrity (Pydantic)**: 수집된 비정형 데이터에 대해 엄격한 스키마 검증(Validation)을 도입하여 DB 오염을 원천 차단하는 파이프라인을 구축합니다.
+1.  **Hybrid Search**: 키워드 검색과 벡터 검색을 결합하여 정확도와 재현율을 동시에 향상시킵니다.
+2.  **Model Upgrade**: OpenAI `text-embedding-3-small` 또는 한국어 특화 `KoSimCSE` 모델로 업그레이드.
+3.  **Distributed Crawling**: **Celery**와 **RabbitMQ**를 도입하여 대규모(100만 건 이상) 수집을 위한 분산 처리를 구현합니다.
+4.  **Proxy Rotation**: 상용 프록시 풀을 연동하여 공격적인 수집 시에도 차단 위험을 원천 봉쇄합니다.
+5.  **Advanced Observability (ELK Stack)**: 현재의 파일 로깅을 넘어, Logstash/Filebeat를 통해 로그를 중앙 수집하고 **Kibana**로 실시간 에러 대시보드를 구축합니다.
 
 ---
 
