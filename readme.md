@@ -199,8 +199,7 @@ python src/v4_safe_crawler.py 패딩 50
 
 | 서비스 | URL | 용도 |
 | :--- | :--- | :--- |
-| **🔍 Search UI** | [http://localhost:8000/frontend/index_v2.html](http://localhost:8000/frontend/index_v2.html) | 키워드 검색 웹 인터페이스 |
-| **🧠 Vector Search** | [http://localhost:8000/frontend/index_vector.html](http://localhost:8000/frontend/index_vector.html) | 🆕 AI 시맨틱 검색 인터페이스 |
+| **🔍 Search UI** | [http://localhost:8000/frontend/index_v2.html](http://localhost:8000/frontend/index_v2.html) | 키워드 + AI 벡터 하이브리드 검색 웹 인터페이스 |
 | **📄 Swagger UI** | [http://localhost:8000/docs](http://localhost:8000/docs) | API 명세 확인 및 직접 테스트 |
 | **📊 OS Dashboards** | [http://localhost:5601](http://localhost:5601) | 데이터 시각화 및 OpenSearch 인덱스 직접 조회 |
 
@@ -223,7 +222,9 @@ B2_crawling/
 │   ├── generate_embeddings.py  # 🆕 벡터 생성 & 적재
 │   ├── v5_fast_crawler.py      # 핵심 크롤러 로직 (병렬 처리)
 │   ├── v4_safe_crawler.py      # 안전 크롤러 (순차 처리)
+│   ├── v3_fast_crawler.py      # v3 크롤러 (API 방식)
 │   ├── init_opensearch.py      # 기본 인덱스 설정
+│   ├── reload_opensearch.py    # JSONL → OpenSearch 재적재
 │   ├── cache.py                # Redis 캐싱 유틸리티
 │   └── routers/                # API 라우터 모듈 (확장용)
 ├── docs/                       # 🆕 문서
@@ -241,11 +242,12 @@ B2_crawling/
 
 ## 8. 향후 로드맵 (Future Roadmap)
 
-1.  **Hybrid Search**: 키워드 검색과 벡터 검색을 결합하여 정확도와 재현율을 동시에 향상시킵니다.
+1.  **✅ Hybrid Search (Complete)**: 키워드 검색과 벡터 검색을 탭 UI로 통합 완료. 정렬/페이지네이션 지원.
 2.  **Model Upgrade**: OpenAI `text-embedding-3-small` 또는 한국어 특화 `KoSimCSE` 모델로 업그레이드.
-3.  **Distributed Crawling**: **Celery**와 **RabbitMQ**를 도입하여 대규모(100만 건 이상) 수집을 위한 분산 처리를 구현합니다.
-4.  **Proxy Rotation**: 상용 프록시 풀을 연동하여 공격적인 수집 시에도 차단 위험을 원천 봉쇄합니다.
-5.  **Advanced Observability (ELK Stack)**: 현재의 파일 로깅을 넘어, Logstash/Filebeat를 통해 로그를 중앙 수집하고 **Kibana**로 실시간 에러 대시보드를 구축합니다.
+3.  **Hybrid RRF**: 두 검색 결과를 점수 기반 Reciprocal Rank Fusion으로 통합 랭킹.
+4.  **Distributed Crawling**: **Celery**와 **RabbitMQ**를 도입하여 대규모(100만 건 이상) 수집을 위한 분산 처리를 구현합니다.
+5.  **Proxy Rotation**: 상용 프록시 풀을 연동하여 공격적인 수집 시에도 차단 위험을 원천 봉쇄합니다.
+6.  **Advanced Observability (ELK Stack)**: 현재의 파일 로깅을 넘어, Logstash/Filebeat를 통해 로그를 중앙 수집하고 **Kibana**로 실시간 에러 대시보드를 구축합니다.
 
 ---
 
